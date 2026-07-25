@@ -54,6 +54,41 @@ class EvidenceStatus(StrEnum):
     NOT_RUN = "not_run"
 
 
+class RelativePosition(StrEnum):
+    UPSTREAM = "upstream"
+    DOWNSTREAM = "downstream"
+    OVERLAPPING = "overlapping"
+    SAME_FEATURE = "same_feature"
+    DIFFERENT_CONTIG = "different_contig"
+    UNKNOWN = "unknown"
+
+
+class CoordinatePosition(StrEnum):
+    LEFT_OF_QUERY = "left_of_query"
+    RIGHT_OF_QUERY = "right_of_query"
+    OVERLAPPING = "overlapping"
+    SAME_FEATURE = "same_feature"
+    DIFFERENT_CONTIG = "different_contig"
+    UNKNOWN = "unknown"
+
+
+class StrandRelationship(StrEnum):
+    SAME_DIRECTION = "same_direction"
+    CONVERGENT = "convergent"
+    DIVERGENT = "divergent"
+    OPPOSITE_PARALLEL = "opposite_parallel"
+    UNKNOWN = "unknown"
+    DIFFERENT_CONTIG = "different_contig"
+
+
+class ContextCompleteness(StrEnum):
+    COMPLETE = "complete"
+    LEFT_TRUNCATED = "left_truncated"
+    RIGHT_TRUNCATED = "right_truncated"
+    BOTH_TRUNCATED = "both_truncated"
+    UNKNOWN = "unknown"
+
+
 class ContradictionSeverity(StrEnum):
     INFO = "info"
     LOW = "low"

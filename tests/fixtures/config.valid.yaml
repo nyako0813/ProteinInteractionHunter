@@ -19,9 +19,10 @@ candidate_generation:
   fragment_policy: flag
   self_candidate_policy: exclude
 gene_context:
-  enabled: false
+  enabled: true
   neighborhood_gene_count: 5
   operon_proxy_max_intergenic_bp: 200
+  require_query_coordinates: false
 orthology:
   enabled: false
   engine: blast

@@ -1,12 +1,14 @@
 ##gff-version 3
+##sequence-region contig1 1 50000
+##sequence-region contig2 1 1000
 contig1	synthetic	gene	50	220	.	+	.	ID=gene_query;locus_tag=LT0001;old_locus_tag=OLD0001
 contig1	synthetic	CDS	50	220	.	+	0	ID=cds_query;Parent=gene_query;protein_id=QUERY_001;locus_tag=LT0001
 contig1	synthetic	gene	250	420	.	+	.	ID=gene_near;locus_tag=LT0002
 contig1	synthetic	CDS	250	420	.	+	0	ID=cds_near;Parent=gene_near;protein_id=NEAR_001;locus_tag=LT0002
 contig1	synthetic	gene	450	620	.	-	.	ID=gene_reverse;locus_tag=LT0003
 contig1	synthetic	CDS	450	620	.	-	0	ID=cds_reverse;Parent=gene_reverse;protein_id=REVERSE_001;locus_tag=LT0003
-contig1	synthetic	gene	600	770	.	+	.	ID=gene_overlap;locus_tag=LT0004
-contig1	synthetic	CDS	600	770	.	+	0	ID=cds_overlap;Parent=gene_overlap;protein_id=OVERLAP_001;locus_tag=LT0004
+contig1	synthetic	gene	200	370	.	+	.	ID=gene_overlap;locus_tag=LT0004
+contig1	synthetic	CDS	200	370	.	+	0	ID=cds_overlap;Parent=gene_overlap;protein_id=OVERLAP_001;locus_tag=LT0004
 contig1	synthetic	gene	900	1070	.	+	.	ID=gene_hyp;locus_tag=LT0005
 contig1	synthetic	CDS	900	1070	.	+	0	ID=cds_hyp;Parent=gene_hyp;protein_id=HYP_001;locus_tag=LT0005
 contig1	synthetic	gene	1100	1270	.	+	.	ID=gene_mem;locus_tag=LT0006

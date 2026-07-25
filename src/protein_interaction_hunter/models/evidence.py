@@ -7,11 +7,15 @@ from pydantic import Field, StringConstraints
 from protein_interaction_hunter.models.base import StrictModel
 from protein_interaction_hunter.models.enums import (
     CandidateDisposition,
+    ContextCompleteness,
     ContradictionSeverity,
+    CoordinatePosition,
     EvidenceOrigin,
     EvidenceStatus,
     EvidenceTier,
     PredictedRelationshipType,
+    RelativePosition,
+    StrandRelationship,
 )
 from protein_interaction_hunter.models.protein import CandidateProtein
 from protein_interaction_hunter.models.scoring import CandidateScore
@@ -37,9 +41,33 @@ class BaseEvidence(StrictModel):
 
 
 class GenomeContextEvidence(BaseEvidence):
+    calculation_rule_version: NonEmptyStr | None = None
+    same_contig: bool | None = None
     same_seqid: bool | None = None
+    query_contig: NonEmptyStr | None = None
+    candidate_contig: NonEmptyStr | None = None
+    query_start: int | None = Field(default=None, ge=1)
+    query_end: int | None = Field(default=None, ge=1)
+    query_strand: str | None = Field(default=None, pattern=r"^[+\-?]$")
+    candidate_start: int | None = Field(default=None, ge=1)
+    candidate_end: int | None = Field(default=None, ge=1)
+    candidate_strand: str | None = Field(default=None, pattern=r"^[+\-?]$")
+    strand_relationship: StrandRelationship | None = None
     distance_bp: int | None = Field(default=None, ge=0)
+    overlap_bp: int | None = Field(default=None, ge=0)
+    relative_position: RelativePosition | None = None
+    coordinate_position: CoordinatePosition | None = None
+    intervening_feature_count: int | None = Field(default=None, ge=0)
     intervening_gene_count: int | None = Field(default=None, ge=0)
+    query_feature_index: int | None = Field(default=None, ge=0)
+    candidate_feature_index: int | None = Field(default=None, ge=0)
+    feature_index_delta: int | None = Field(default=None, ge=0)
+    within_neighborhood_window: bool | None = None
+    query_left_edge_distance_bp: int | None = Field(default=None, ge=0)
+    query_right_edge_distance_bp: int | None = Field(default=None, ge=0)
+    candidate_left_edge_distance_bp: int | None = Field(default=None, ge=0)
+    candidate_right_edge_distance_bp: int | None = Field(default=None, ge=0)
+    context_completeness: ContextCompleteness | None = None
     strand_relation: str | None = None
     boundary_flags: list[str] = Field(default_factory=list)
 

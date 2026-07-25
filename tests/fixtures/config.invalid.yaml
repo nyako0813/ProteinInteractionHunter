@@ -23,6 +23,7 @@ gene_context:
   neighborhood_gene_count: -1
   operon_proxy_max_intergenic_bp: -1
 orthology:
+  require_query_coordinates: false
   enabled: false
   engine: blast
   database: null

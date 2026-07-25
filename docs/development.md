@@ -20,6 +20,19 @@ python scripts/validate_schemas.py
 python -m pytest --cov=protein_interaction_hunter --cov-report=term-missing
 ```
 
+Focused MVP-1B checks:
+
+```bash
+python -m pytest tests/unit/test_gene_context.py tests/integration/test_candidate_pipeline.py
+protein-interaction-hunter generate-candidates --config tests/fixtures/config.valid.yaml
+```
+
+The gene-context tests must cover adjacency, inclusive overlap, self pairs, transcription-relative
+position, all strand relations, representative feature de-duplication, ambiguous coordinates,
+different contigs, missing coordinates, sequence-region boundaries, deterministic output, and
+disabled/required-coordinate policy behavior. Update checked-in JSON schemas with
+`python scripts/validate_schemas.py --write` only after an intentional model/version change.
+
 Before committing, also run:
 
 ```bash

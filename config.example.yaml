@@ -24,7 +24,8 @@ candidate_generation:
   self_candidate_policy: exclude
 
 gene_context:
-  enabled: false
+  enabled: true
+  require_query_coordinates: false
   neighborhood_gene_count: 5
   operon_proxy_max_intergenic_bp: 200
 

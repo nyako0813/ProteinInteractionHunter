@@ -55,6 +55,7 @@ class CandidateGenerationConfig(StrictModel):
 class GeneContextConfig(StrictModel):
     enabled: bool = False
     neighborhood_gene_count: int = Field(default=5, ge=0)
+    require_query_coordinates: bool = False
     operon_proxy_max_intergenic_bp: int = Field(default=200, ge=0)
 
 

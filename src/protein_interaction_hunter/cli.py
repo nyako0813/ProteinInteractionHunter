@@ -13,7 +13,7 @@ from protein_interaction_hunter.exceptions import ProteinInteractionHunterError
 
 app = typer.Typer(
     name="protein-interaction-hunter",
-    help="Validate inputs and generate local-only MVP-1A candidate records.",
+    help="Validate inputs and generate local-only MVP-1B gene-context records.",
     no_args_is_help=True,
 )
 
@@ -128,6 +128,13 @@ def generate_candidates_command(
         ("missing_coordinate_count", summary.missing_coordinate_count),
         ("missing_annotation_count", summary.missing_annotation_count),
         ("ambiguous_mapping_count", summary.ambiguous_mapping_count),
+        ("same_contig_pair_count", summary.same_contig_pair_count),
+        ("different_contig_pair_count", summary.different_contig_pair_count),
+        ("overlapping_pair_count", summary.overlapping_pair_count),
+        ("missing_context_pair_count", summary.missing_context_pair_count),
+        ("ambiguous_context_pair_count", summary.ambiguous_context_pair_count),
+        ("neighborhood_pair_count", summary.neighborhood_pair_count),
+        ("incomplete_context_pair_count", summary.incomplete_context_pair_count),
         ("output_path", summary.output_path),
     ):
         typer.echo(f"{label}: {value}")

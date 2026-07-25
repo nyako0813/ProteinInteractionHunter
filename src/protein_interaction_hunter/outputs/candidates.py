@@ -3,10 +3,11 @@
 import csv
 import io
 from collections import Counter
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
+from protein_interaction_hunter.models.evidence import GenomeContextEvidence
 from protein_interaction_hunter.models.protein import CandidateProtein
 
 CANDIDATE_COLUMNS = (
@@ -32,6 +33,24 @@ CANDIDATE_COLUMNS = (
     "is_hypothetical",
     "identifier_match_status",
     "warnings",
+    "same_contig",
+    "query_start",
+    "query_end",
+    "query_strand",
+    "candidate_start",
+    "candidate_end",
+    "candidate_strand",
+    "strand_relationship",
+    "relative_position",
+    "coordinate_position",
+    "distance_bp",
+    "overlap_bp",
+    "intervening_gene_count",
+    "intervening_feature_count",
+    "feature_index_delta",
+    "within_neighborhood_window",
+    "context_completeness",
+    "gene_context_status",
 )
 
 
@@ -40,11 +59,19 @@ def _list(values: list[str]) -> str:
 
 
 def _value(value: Any) -> Any:
-    return "" if value is None else value
+    if value is None:
+        return ""
+    return value.value if hasattr(value, "value") else value
 
 
 class CandidateTableTsvWriter:
-    def write(self, run_id: str, candidates: Sequence[CandidateProtein], path: Path) -> Path:
+    def write(
+        self,
+        run_id: str,
+        candidates: Sequence[CandidateProtein],
+        path: Path,
+        contexts: Mapping[tuple[str, str], GenomeContextEvidence] | None = None,
+    ) -> Path:
         output_path = path.expanduser().resolve()
         output_path.parent.mkdir(parents=True, exist_ok=True)
         buffer = io.StringIO(newline="")
@@ -52,7 +79,9 @@ class CandidateTableTsvWriter:
             buffer, fieldnames=CANDIDATE_COLUMNS, delimiter="\t", lineterminator="\n"
         )
         writer.writeheader()
+        context_map = contexts or {}
         for candidate in sorted(candidates, key=lambda item: (item.query_id, item.protein_id)):
+            context = context_map.get((candidate.query_id, candidate.protein_id))
             writer.writerow(
                 {
                     "run_id": run_id,
@@ -77,6 +106,32 @@ class CandidateTableTsvWriter:
                     "is_hypothetical": candidate.is_hypothetical,
                     "identifier_match_status": candidate.identifier_match_status.value,
                     "warnings": _list(candidate.warnings),
+                    "same_contig": _value(context.same_contig if context else None),
+                    "query_start": _value(context.query_start if context else None),
+                    "query_end": _value(context.query_end if context else None),
+                    "query_strand": _value(context.query_strand if context else None),
+                    "candidate_start": _value(context.candidate_start if context else None),
+                    "candidate_end": _value(context.candidate_end if context else None),
+                    "candidate_strand": _value(context.candidate_strand if context else None),
+                    "strand_relationship": _value(context.strand_relationship if context else None),
+                    "relative_position": _value(context.relative_position if context else None),
+                    "coordinate_position": _value(context.coordinate_position if context else None),
+                    "distance_bp": _value(context.distance_bp if context else None),
+                    "overlap_bp": _value(context.overlap_bp if context else None),
+                    "intervening_gene_count": _value(
+                        context.intervening_gene_count if context else None
+                    ),
+                    "intervening_feature_count": _value(
+                        context.intervening_feature_count if context else None
+                    ),
+                    "feature_index_delta": _value(context.feature_index_delta if context else None),
+                    "within_neighborhood_window": _value(
+                        context.within_neighborhood_window if context else None
+                    ),
+                    "context_completeness": _value(
+                        context.context_completeness if context else None
+                    ),
+                    "gene_context_status": _value(context.status if context else None),
                 }
             )
         output_path.write_text(buffer.getvalue(), encoding="utf-8", newline="\n")

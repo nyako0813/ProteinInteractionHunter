@@ -360,6 +360,17 @@
       "title": "CandidateScore",
       "type": "object"
     },
+    "ContextCompleteness": {
+      "enum": [
+        "complete",
+        "left_truncated",
+        "right_truncated",
+        "both_truncated",
+        "unknown"
+      ],
+      "title": "ContextCompleteness",
+      "type": "string"
+    },
     "ContradictionEvidence": {
       "additionalProperties": false,
       "properties": {
@@ -449,6 +460,18 @@
         "critical"
       ],
       "title": "ContradictionSeverity",
+      "type": "string"
+    },
+    "CoordinatePosition": {
+      "enum": [
+        "left_of_query",
+        "right_of_query",
+        "overlapping",
+        "same_feature",
+        "different_contig",
+        "unknown"
+      ],
+      "title": "CoordinatePosition",
       "type": "string"
     },
     "DomainEvidence": {
@@ -922,6 +945,132 @@
           "title": "Boundary Flags",
           "type": "array"
         },
+        "calculation_rule_version": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Calculation Rule Version"
+        },
+        "candidate_contig": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Candidate Contig"
+        },
+        "candidate_end": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Candidate End"
+        },
+        "candidate_feature_index": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Candidate Feature Index"
+        },
+        "candidate_left_edge_distance_bp": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Candidate Left Edge Distance Bp"
+        },
+        "candidate_right_edge_distance_bp": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Candidate Right Edge Distance Bp"
+        },
+        "candidate_start": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Candidate Start"
+        },
+        "candidate_strand": {
+          "anyOf": [
+            {
+              "pattern": "^[+\\-?]$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Candidate Strand"
+        },
+        "context_completeness": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ContextCompleteness"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "coordinate_position": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CoordinatePosition"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "distance_bp": {
           "anyOf": [
             {
@@ -934,6 +1083,32 @@
           ],
           "default": null,
           "title": "Distance Bp"
+        },
+        "feature_index_delta": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Feature Index Delta"
+        },
+        "intervening_feature_count": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Intervening Feature Count"
         },
         "intervening_gene_count": {
           "anyOf": [
@@ -951,6 +1126,19 @@
         "origin": {
           "$ref": "#/$defs/EvidenceOrigin",
           "default": "inferred"
+        },
+        "overlap_bp": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Overlap Bp"
         },
         "provenance": {
           "items": {
@@ -972,6 +1160,120 @@
           ],
           "default": null,
           "title": "Quality"
+        },
+        "query_contig": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Query Contig"
+        },
+        "query_end": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Query End"
+        },
+        "query_feature_index": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Query Feature Index"
+        },
+        "query_left_edge_distance_bp": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Query Left Edge Distance Bp"
+        },
+        "query_right_edge_distance_bp": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Query Right Edge Distance Bp"
+        },
+        "query_start": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Query Start"
+        },
+        "query_strand": {
+          "anyOf": [
+            {
+              "pattern": "^[+\\-?]$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Query Strand"
+        },
+        "relative_position": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RelativePosition"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "same_contig": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Same Contig"
         },
         "same_seqid": {
           "anyOf": [
@@ -1001,12 +1303,35 @@
           "default": null,
           "title": "Strand Relation"
         },
+        "strand_relationship": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StrandRelationship"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "warnings": {
           "items": {
             "type": "string"
           },
           "title": "Warnings",
           "type": "array"
+        },
+        "within_neighborhood_window": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Within Neighborhood Window"
         }
       },
       "title": "GenomeContextEvidence",
@@ -1593,9 +1918,33 @@
       ],
       "title": "PredictedRelationshipType",
       "type": "string"
+    },
+    "RelativePosition": {
+      "enum": [
+        "upstream",
+        "downstream",
+        "overlapping",
+        "same_feature",
+        "different_contig",
+        "unknown"
+      ],
+      "title": "RelativePosition",
+      "type": "string"
+    },
+    "StrandRelationship": {
+      "enum": [
+        "same_direction",
+        "convergent",
+        "divergent",
+        "opposite_parallel",
+        "unknown",
+        "different_contig"
+      ],
+      "title": "StrandRelationship",
+      "type": "string"
     }
   },
-  "$id": "https://schemas.protein-interaction-hunter.local/candidate_evidence_bundle/1.1",
+  "$id": "https://schemas.protein-interaction-hunter.local/candidate_evidence_bundle/1.2",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "properties": {

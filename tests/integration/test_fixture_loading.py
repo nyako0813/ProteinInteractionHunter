@@ -2,6 +2,8 @@
 
 from pathlib import Path
 
+import pytest
+
 from protein_interaction_hunter.adapters.local.annotation import LocalAnnotationTsvLoader
 from protein_interaction_hunter.adapters.local.fasta import (
     LocalFastaLoader,
@@ -13,6 +15,7 @@ from protein_interaction_hunter.adapters.local.gff import (
 )
 from protein_interaction_hunter.application.validation import validate_local_inputs
 from protein_interaction_hunter.config import load_config
+from protein_interaction_hunter.exceptions import InputValidationError
 from protein_interaction_hunter.models.enums import EvidenceStatus
 
 
@@ -38,9 +41,7 @@ def test_synthetic_gff_loads_identifiers_and_decodes_attributes(
 
 
 def test_synthetic_annotation_allows_missing_values(fixture_dir: Path) -> None:
-    records = LocalAnnotationTsvLoader().load(
-        fixture_dir / "synthetic_annotations.tsv"
-    )
+    records = LocalAnnotationTsvLoader().load(fixture_dir / "synthetic_annotations.tsv")
     assert len(records) == 11
     hypothetical = next(record for record in records if record.protein_id == "HYP_001")
     assert hypothetical.annotation_confidence is None
@@ -56,3 +57,33 @@ def test_combined_input_summary_and_query_existence(valid_config_path: Path) -> 
     assert summary.duplicate_sequence_group_count == 1
     assert summary.missing_coordinate_count == 1
     assert summary.hypothetical_protein_count == 1
+
+
+def test_gff_document_retains_sequence_region(fixture_dir: Path) -> None:
+    document = LocalGff3Loader().load_document(fixture_dir / "synthetic_genome.gff3")
+    assert document.sequence_regions["contig1"].start == 1
+    assert document.sequence_regions["contig1"].end == 50000
+    assert document.warnings == []
+
+
+def test_gff_reversed_coordinate_is_rejected(tmp_path: Path) -> None:
+    path = tmp_path / "reversed.gff3"
+    path.write_text(
+        "##gff-version 3\nc\ttest\tCDS\t200\t100\t.\t+\t0\tID=x;protein_id=P1\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(InputValidationError, match="Invalid GFF line"):
+        LocalGff3Loader().load_document(path)
+
+
+def test_conflicting_sequence_regions_are_rejected(tmp_path: Path) -> None:
+    path = tmp_path / "conflicting.gff3"
+    path.write_text(
+        "##gff-version 3\n"
+        "##sequence-region c 1 1000\n"
+        "##sequence-region c 1 2000\n"
+        "c\ttest\tgene\t10\t20\t.\t+\t.\tID=x\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(InputValidationError, match="Conflicting ##sequence-region"):
+        LocalGff3Loader().load_document(path)

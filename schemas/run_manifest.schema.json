@@ -82,7 +82,7 @@
       "type": "string"
     }
   },
-  "$id": "https://schemas.protein-interaction-hunter.local/run_manifest/1.1",
+  "$id": "https://schemas.protein-interaction-hunter.local/run_manifest/1.2",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "properties": {
@@ -135,6 +135,19 @@
       },
       "title": "Dependency Versions",
       "type": "object"
+    },
+    "gene_context_rule_version": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Gene Context Rule Version"
     },
     "git_commit": {
       "anyOf": [
