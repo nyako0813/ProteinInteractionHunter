@@ -82,7 +82,7 @@
       "type": "string"
     }
   },
-  "$id": "https://schemas.protein-interaction-hunter.local/run_manifest/1.0",
+  "$id": "https://schemas.protein-interaction-hunter.local/run_manifest/1.1",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "properties": {
@@ -163,15 +163,52 @@
       "title": "Input Files",
       "type": "array"
     },
+    "normalization_rule_version": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Normalization Rule Version"
+    },
     "package_version": {
       "minLength": 1,
       "title": "Package Version",
       "type": "string"
     },
+    "parser_warnings": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Parser Warnings",
+      "type": "array"
+    },
     "platform": {
       "minLength": 1,
       "title": "Platform",
       "type": "string"
+    },
+    "policy_settings": {
+      "additionalProperties": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "integer"
+          },
+          {
+            "type": "boolean"
+          }
+        ]
+      },
+      "title": "Policy Settings",
+      "type": "object"
     },
     "python_version": {
       "minLength": 1,

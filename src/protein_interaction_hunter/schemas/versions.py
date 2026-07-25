@@ -12,8 +12,8 @@ class SchemaName(StrEnum):
 
 
 SCHEMA_VERSIONS: dict[SchemaName, str] = {
-    SchemaName.CANDIDATE_EVIDENCE_BUNDLE: "1.0",
-    SchemaName.RUN_MANIFEST: "1.0",
+    SchemaName.CANDIDATE_EVIDENCE_BUNDLE: "1.1",
+    SchemaName.RUN_MANIFEST: "1.1",
     SchemaName.STRUCTURE_PREDICTION_QUEUE: "1.0",
 }
 

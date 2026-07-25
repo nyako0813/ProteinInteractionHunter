@@ -7,6 +7,7 @@ from protein_interaction_hunter.models.enums import (
     EvidenceOrigin,
     EvidenceStatus,
     EvidenceTier,
+    IdentifierMatchStatus,
     ManualReviewStatus,
     ManualStructurePriority,
     PredictedRelationshipType,
@@ -27,6 +28,7 @@ from protein_interaction_hunter.models.evidence import (
     PhylogeneticProfileEvidence,
 )
 from protein_interaction_hunter.models.genome import GeneCoordinate
+from protein_interaction_hunter.models.identity import IdentifierAlias, IdentifierResolution
 from protein_interaction_hunter.models.protein import (
     CandidateProtein,
     ProteinRecord,
@@ -49,6 +51,9 @@ __all__ = [
     "EvidenceProvenance",
     "EvidenceStatus",
     "EvidenceTier",
+    "IdentifierAlias",
+    "IdentifierMatchStatus",
+    "IdentifierResolution",
     "FunctionalEvidence",
     "FusionEvidence",
     "GeneCoordinate",

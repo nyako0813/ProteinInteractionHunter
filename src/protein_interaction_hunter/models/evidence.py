@@ -13,6 +13,7 @@ from protein_interaction_hunter.models.enums import (
     EvidenceTier,
     PredictedRelationshipType,
 )
+from protein_interaction_hunter.models.protein import CandidateProtein
 from protein_interaction_hunter.models.scoring import CandidateScore
 from protein_interaction_hunter.schemas.versions import SchemaName, schema_version
 
@@ -129,6 +130,7 @@ class CandidateEvidenceBundle(StrictModel):
     run_id: NonEmptyStr
     query_id: NonEmptyStr
     candidate_id: NonEmptyStr
+    candidate: CandidateProtein | None = None
     candidate_disposition: CandidateDisposition
     predicted_relationship_type: PredictedRelationshipType
     evidence_tier: EvidenceTier | None = None
@@ -145,4 +147,5 @@ class CandidateEvidenceBundle(StrictModel):
     score: CandidateScore = Field(default_factory=CandidateScore)
     engine_statuses: dict[str, EvidenceStatus] = Field(default_factory=dict)
     provenance: list[EvidenceProvenance] = Field(default_factory=list)
+    policy_settings: dict[str, Any] = Field(default_factory=dict)
     warnings: list[str] = Field(default_factory=list)

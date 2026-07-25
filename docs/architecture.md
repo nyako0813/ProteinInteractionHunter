@@ -13,9 +13,10 @@ Adapters and outputs
 ```
 
 Domain models contain scientific records and validation rules only. They do not import CLI,
-network, Excel, or external-service code. Application services coordinate validation without
-performing candidate analysis. Ports describe capabilities. Local adapters parse fixture
-files, while output adapters serialize already-validated models.
+network, Excel, or external-service code. MVP-1A application services build the identifier
+index, resolve queries, enumerate candidates, and apply configuration policies without running
+biological evidence analysis. Ports describe capabilities. Local adapters parse input files,
+while output adapters serialize already-validated models.
 
 ## Boundaries
 
@@ -29,7 +30,11 @@ files, while output adapters serialize already-validated models.
 
 ## Unimplemented engines
 
-Candidate generation, gene context analysis, operon inference, orthology, phylogenetic
-profiles, domain analysis, functional complementarity, localization prediction, known
-interaction retrieval, scoring, tiers, and ranking remain outside MVP-0. The pipeline
-placeholder raises an explicit exception rather than returning empty or synthetic results.
+Gene context analysis, operon inference, orthology, phylogenetic profiles, domain analysis,
+functional complementarity, localization prediction, known interaction retrieval, scoring,
+tiers, and ranking remain outside MVP-1A. The pipeline emits `not_run` for each of these stages
+and leaves every score and tier unset.
+
+Identifier integration preserves original aliases, uses normalized values only for lookup,
+and carries ambiguity forward instead of choosing a record. FASTA protein IDs are canonical
+candidate identities.

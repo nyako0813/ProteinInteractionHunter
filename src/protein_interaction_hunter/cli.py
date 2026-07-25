@@ -6,13 +6,14 @@ from typing import Annotated
 import typer
 
 from protein_interaction_hunter import __version__
+from protein_interaction_hunter.application.pipeline import InteractionCandidatePipeline
 from protein_interaction_hunter.application.validation import validate_local_inputs
 from protein_interaction_hunter.config import load_config
 from protein_interaction_hunter.exceptions import ProteinInteractionHunterError
 
 app = typer.Typer(
     name="protein-interaction-hunter",
-    help="Validate ProteinInteractionHunter MVP-0 configuration and local fixtures.",
+    help="Validate inputs and generate local-only MVP-1A candidate records.",
     no_args_is_help=True,
 )
 
@@ -91,5 +92,42 @@ def inspect_fixture_command(
         ("duplicate_sequence_group_count", summary.duplicate_sequence_group_count),
         ("missing_coordinate_count", summary.missing_coordinate_count),
         ("hypothetical_protein_count", summary.hypothetical_protein_count),
+    ):
+        typer.echo(f"{label}: {value}")
+
+
+@app.command("generate-candidates")
+def generate_candidates_command(
+    config: Annotated[Path, typer.Option("--config", exists=True, dir_okay=False)],
+) -> None:
+    """Generate all query-protein pairs without scores, tiers, or ranking."""
+    try:
+        result = InteractionCandidatePipeline().run(
+            config,
+            command_line=[
+                "protein-interaction-hunter",
+                "generate-candidates",
+                "--config",
+                str(config),
+            ],
+        )
+    except ProteinInteractionHunterError as exc:
+        _fail(exc)
+        return
+    summary = result.summary
+    for label, value in (
+        ("query_count", summary.query_count),
+        ("protein_count", summary.protein_count),
+        ("query_candidate_pair_count", summary.pair_count),
+        ("included_count", summary.included_count),
+        ("flagged_count", summary.flagged_count),
+        ("excluded_count", summary.excluded_count),
+        ("duplicate_group_count", summary.duplicate_group_count),
+        ("fragment_candidate_count", summary.fragment_candidate_count),
+        ("hypothetical_protein_count", summary.hypothetical_protein_count),
+        ("missing_coordinate_count", summary.missing_coordinate_count),
+        ("missing_annotation_count", summary.missing_annotation_count),
+        ("ambiguous_mapping_count", summary.ambiguous_mapping_count),
+        ("output_path", summary.output_path),
     ):
         typer.echo(f"{label}: {value}")

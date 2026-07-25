@@ -10,6 +10,223 @@
       "title": "CandidateDisposition",
       "type": "string"
     },
+    "CandidateProtein": {
+      "additionalProperties": false,
+      "properties": {
+        "annotation_status": {
+          "$ref": "#/$defs/EvidenceStatus",
+          "default": "missing"
+        },
+        "contig": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Contig"
+        },
+        "coordinate_status": {
+          "$ref": "#/$defs/EvidenceStatus",
+          "default": "missing"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "disposition": {
+          "$ref": "#/$defs/CandidateDisposition",
+          "default": "included"
+        },
+        "disposition_reasons": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Disposition Reasons",
+          "type": "array"
+        },
+        "duplicate_sequence_group": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Duplicate Sequence Group"
+        },
+        "fragment_reasons": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Fragment Reasons",
+          "type": "array"
+        },
+        "gene_id": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Gene Id"
+        },
+        "has_annotation": {
+          "default": false,
+          "title": "Has Annotation",
+          "type": "boolean"
+        },
+        "has_coordinate": {
+          "default": false,
+          "title": "Has Coordinate",
+          "type": "boolean"
+        },
+        "identifier_match_status": {
+          "$ref": "#/$defs/IdentifierMatchStatus",
+          "default": "no_match"
+        },
+        "is_duplicate_sequence": {
+          "default": false,
+          "title": "Is Duplicate Sequence",
+          "type": "boolean"
+        },
+        "is_fragment_candidate": {
+          "default": false,
+          "title": "Is Fragment Candidate",
+          "type": "boolean"
+        },
+        "is_hypothetical": {
+          "default": false,
+          "title": "Is Hypothetical",
+          "type": "boolean"
+        },
+        "locus_tag": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Locus Tag"
+        },
+        "normalized_identifiers": {
+          "additionalProperties": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "title": "Normalized Identifiers",
+          "type": "object"
+        },
+        "old_locus_tag": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Old Locus Tag"
+        },
+        "original_identifiers": {
+          "additionalProperties": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "title": "Original Identifiers",
+          "type": "object"
+        },
+        "paralog_group": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Paralog Group"
+        },
+        "protein_id": {
+          "minLength": 1,
+          "title": "Protein Id",
+          "type": "string"
+        },
+        "query_id": {
+          "minLength": 1,
+          "title": "Query Id",
+          "type": "string"
+        },
+        "same_contig_as_query": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Same Contig As Query"
+        },
+        "sequence_length": {
+          "minimum": 1,
+          "title": "Sequence Length",
+          "type": "integer"
+        },
+        "strand": {
+          "anyOf": [
+            {
+              "pattern": "^[+\\-?]$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Strand"
+        },
+        "warnings": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "query_id",
+        "protein_id",
+        "sequence_length"
+      ],
+      "title": "CandidateProtein",
+      "type": "object"
+    },
     "CandidateScore": {
       "additionalProperties": false,
       "properties": {
@@ -795,6 +1012,16 @@
       "title": "GenomeContextEvidence",
       "type": "object"
     },
+    "IdentifierMatchStatus": {
+      "enum": [
+        "exact_match",
+        "unique_alias_match",
+        "ambiguous_match",
+        "no_match"
+      ],
+      "title": "IdentifierMatchStatus",
+      "type": "string"
+    },
     "KnownInteractionEvidence": {
       "additionalProperties": false,
       "properties": {
@@ -1368,10 +1595,21 @@
       "type": "string"
     }
   },
-  "$id": "https://schemas.protein-interaction-hunter.local/candidate_evidence_bundle/1.0",
+  "$id": "https://schemas.protein-interaction-hunter.local/candidate_evidence_bundle/1.1",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "properties": {
+    "candidate": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/CandidateProtein"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
     "candidate_disposition": {
       "$ref": "#/$defs/CandidateDisposition"
     },
@@ -1467,6 +1705,11 @@
       },
       "title": "Phylogenetic Profile",
       "type": "array"
+    },
+    "policy_settings": {
+      "additionalProperties": true,
+      "title": "Policy Settings",
+      "type": "object"
     },
     "predicted_relationship_type": {
       "$ref": "#/$defs/PredictedRelationshipType"

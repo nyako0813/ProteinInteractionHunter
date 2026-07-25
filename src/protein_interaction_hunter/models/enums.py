@@ -30,6 +30,13 @@ class CandidateDisposition(StrEnum):
     EXCLUDED = "excluded"
 
 
+class IdentifierMatchStatus(StrEnum):
+    EXACT_MATCH = "exact_match"
+    UNIQUE_ALIAS_MATCH = "unique_alias_match"
+    AMBIGUOUS_MATCH = "ambiguous_match"
+    NO_MATCH = "no_match"
+
+
 class EvidenceOrigin(StrEnum):
     EXACT_PROTEIN = "exact_protein"
     EXACT_PAIR = "exact_pair"

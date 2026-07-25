@@ -52,6 +52,9 @@ class RunManifest(StrictModel):
     random_seed: int
     warnings: list[str] = Field(default_factory=list)
     incomplete_evidence_flags: list[str] = Field(default_factory=list)
+    normalization_rule_version: NonEmptyStr | None = None
+    policy_settings: dict[str, str | int | bool] = Field(default_factory=dict)
+    parser_warnings: list[str] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def validate_timestamps(self) -> "RunManifest":
