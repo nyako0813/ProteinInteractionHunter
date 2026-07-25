@@ -1,0 +1,44 @@
+ruleset_version: mvp1d-functional-complementarity-v1
+
+roles:
+  - role_id: enzyme
+    include_terms:
+      - enzyme
+      - catalytic
+      - synthase
+      - ligase
+    exclude_terms:
+      - inactive
+
+  - role_id: accessory_factor
+    include_terms:
+      - accessory
+      - helper
+      - cofactor
+      - chaperone
+    exclude_terms: []
+
+  - role_id: membrane_protein
+    include_terms:
+      - membrane
+      - transporter
+    exclude_terms: []
+
+pair_rules:
+  - rule_id: enzyme-accessory-factor-v1
+    query_role: enzyme
+    candidate_role: accessory_factor
+    relationship_hint: accessory_factor
+    support_terms:
+      - enzyme
+      - accessory
+    conflicting_terms: []
+
+  - rule_id: enzyme-membrane-association-v1
+    query_role: enzyme
+    candidate_role: membrane_protein
+    relationship_hint: pathway_association
+    support_terms:
+      - enzyme
+      - membrane
+    conflicting_terms: []

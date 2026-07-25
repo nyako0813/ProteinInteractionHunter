@@ -31,6 +31,11 @@ from protein_interaction_hunter.models.evidence import (
     OrthologRecord,
     PhylogeneticProfileEvidence,
 )
+from protein_interaction_hunter.models.functional_rules import (
+    FunctionalComplementarityRuleset,
+    FunctionalPairRule,
+    FunctionalRoleRule,
+)
 from protein_interaction_hunter.models.genome import (
     GeneCoordinate,
     GffDocument,
@@ -88,4 +93,7 @@ __all__ = [
     "SequenceRegion",
     "StrandRelationship",
     "StructurePredictionQueueEntry",
+    "FunctionalComplementarityRuleset",
+    "FunctionalPairRule",
+    "FunctionalRoleRule",
 ]

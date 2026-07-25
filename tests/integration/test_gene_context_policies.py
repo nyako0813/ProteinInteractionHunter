@@ -10,13 +10,39 @@ from protein_interaction_hunter.exceptions import InputValidationError
 from protein_interaction_hunter.models import EvidenceStatus
 
 
-def config_copy(valid_config_path: Path, tmp_path: Path, name: str) -> tuple[dict, Path]:
-    raw = yaml.safe_load(valid_config_path.read_text(encoding="utf-8"))
-    fixture_dir = valid_config_path.parent
-    raw["input"]["proteome_fasta"] = str(fixture_dir / "synthetic_proteome.fasta")
-    raw["input"]["genome_gff"] = str(fixture_dir / "synthetic_genome.gff3")
-    raw["input"]["annotation_table"] = str(fixture_dir / "synthetic_annotations.tsv")
-    raw["output"]["directory"] = str(tmp_path / name)
+def config_copy(
+    source: Path,
+    tmp_path: Path,
+    name: str,
+) -> tuple[dict[str, object], Path]:
+    raw = yaml.safe_load(source.read_text(encoding="utf-8"))
+    fixture_dir = source.parent
+
+    raw["input"]["proteome_fasta"] = str(
+        (fixture_dir / raw["input"]["proteome_fasta"]).resolve()
+    )
+    raw["input"]["genome_gff"] = str(
+        (fixture_dir / raw["input"]["genome_gff"]).resolve()
+    )
+
+    annotation_table = raw["input"].get("annotation_table")
+    if annotation_table is not None:
+        raw["input"]["annotation_table"] = str(
+            (fixture_dir / annotation_table).resolve()
+        )
+
+    rules_path = raw["functional_complementarity"].get(
+        "rules_path"
+    )
+    if rules_path is not None:
+        raw["functional_complementarity"]["rules_path"] = str(
+            (fixture_dir / rules_path).resolve()
+        )
+
+    raw["output"]["directory"] = str(
+        tmp_path / f"{name}_output"
+    )
+
     return raw, tmp_path / f"{name}.yaml"
 
 

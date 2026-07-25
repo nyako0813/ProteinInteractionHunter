@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from protein_interaction_hunter.models.evidence import (
+    FunctionalEvidence,
     GenomeContextEvidence,
     OperonEvidence,
 )
@@ -78,6 +79,18 @@ CANDIDATE_COLUMNS = (
     "operon_rule_version",
     "operon_rule_id",
     "operon_warnings",
+    "functional_status",
+    "functional_matched",
+    "functional_relationship_hints",
+    "functional_rule_ids",
+    "functional_query_roles",
+    "functional_candidate_roles",
+    "functional_query_matched_terms",
+    "functional_candidate_matched_terms",
+    "functional_support_terms",
+    "functional_conflicting_terms",
+    "functional_rule_versions",
+    "functional_warnings",
 )
 
 
@@ -90,6 +103,25 @@ def _value(value: Any) -> Any:
         return ""
     return value.value if hasattr(value, "value") else value
 
+def _functional_values(
+    evidence: Sequence[FunctionalEvidence],
+    attribute: str,
+) -> str:
+    values: set[str] = set()
+
+    for item in evidence:
+        value = getattr(item, attribute)
+
+        if value is None:
+            continue
+
+        if isinstance(value, list):
+            values.update(str(_value(entry)) for entry in value)
+        else:
+            values.add(str(_value(value)))
+
+    return "|".join(sorted(values))
+
 
 class CandidateTableTsvWriter:
     def write(
@@ -99,6 +131,11 @@ class CandidateTableTsvWriter:
         path: Path,
         contexts: Mapping[tuple[str, str], GenomeContextEvidence] | None = None,
         operons: Mapping[tuple[str, str], OperonEvidence] | None = None,
+        functional: Mapping[
+            tuple[str, str],
+            Sequence[FunctionalEvidence],
+        ]
+        | None = None,
     ) -> Path:
         output_path = path.expanduser().resolve()
         output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -109,10 +146,12 @@ class CandidateTableTsvWriter:
         writer.writeheader()
         context_map = contexts or {}
         operon_map = operons or {}
+        functional_map = functional or {}
         for candidate in sorted(candidates, key=lambda item: (item.query_id, item.protein_id)):
             pair = (candidate.query_id, candidate.protein_id)
             context = context_map.get(pair)
             operon = operon_map.get(pair)
+            functional_records = functional_map.get(pair, ())
             writer.writerow(
                 {
                     "run_id": run_id,
@@ -229,6 +268,54 @@ class CandidateTableTsvWriter:
                         operon.proxy_rule_id if operon else None
                     ),
                     "operon_warnings": _list(operon.warnings) if operon else "",
+                    "functional_status": _functional_values(
+                        functional_records,
+                        "status",
+                    ),
+                    "functional_matched": _functional_values(
+                        functional_records,
+                        "matched",
+                    ),
+                    "functional_relationship_hints": _functional_values(
+                        functional_records,
+                        "relationship_hint",
+                    ),
+                    "functional_rule_ids": _functional_values(
+                        functional_records,
+                        "rule_id",
+                    ),
+                    "functional_query_roles": _functional_values(
+                        functional_records,
+                        "query_role",
+                    ),
+                    "functional_candidate_roles": _functional_values(
+                        functional_records,
+                        "candidate_role",
+                    ),
+                    "functional_query_matched_terms": _functional_values(
+                        functional_records,
+                        "query_matched_terms",
+                    ),
+                    "functional_candidate_matched_terms": _functional_values(
+                        functional_records,
+                        "candidate_matched_terms",
+                    ),
+                    "functional_support_terms": _functional_values(
+                        functional_records,
+                        "support_terms",
+                    ),
+                    "functional_conflicting_terms": _functional_values(
+                        functional_records,
+                        "conflicting_terms",
+                    ),
+                    "functional_rule_versions": _functional_values(
+                        functional_records,
+                        "calculation_rule_version",
+                    ),
+                    "functional_warnings": _functional_values(
+                        functional_records,
+                        "warnings",
+                    ),
                 }
             )
         output_path.write_text(buffer.getvalue(), encoding="utf-8", newline="\n")

@@ -16,44 +16,98 @@ from protein_interaction_hunter.outputs.candidates import CANDIDATE_COLUMNS
 from protein_interaction_hunter.outputs.jsonl import JsonlEvidenceBundleWriter
 
 
-def e2e_config(valid_config_path: Path, tmp_path: Path) -> Path:
-    raw = yaml.safe_load(valid_config_path.read_text(encoding="utf-8"))
-    fixture_dir = valid_config_path.parent
-    raw["input"]["proteome_fasta"] = str(fixture_dir / "synthetic_proteome.fasta")
-    raw["input"]["genome_gff"] = str(fixture_dir / "synthetic_genome.gff3")
-    raw["input"]["annotation_table"] = str(fixture_dir / "synthetic_annotations.tsv")
-    raw["output"]["directory"] = str(tmp_path / "generated")
-    path = tmp_path / "e2e.yaml"
-    path.write_text(yaml.safe_dump(raw, sort_keys=True), encoding="utf-8")
-    return path
+def e2e_config(source: Path, tmp_path: Path) -> Path:
+    data = yaml.safe_load(source.read_text(encoding="utf-8"))
+    fixture_dir = source.parent
+
+    data["input"]["proteome_fasta"] = str(
+        (fixture_dir / data["input"]["proteome_fasta"]).resolve()
+    )
+    data["input"]["genome_gff"] = str(
+        (fixture_dir / data["input"]["genome_gff"]).resolve()
+    )
+
+    annotation_table = data["input"].get("annotation_table")
+    if annotation_table is not None:
+        data["input"]["annotation_table"] = str(
+            (fixture_dir / annotation_table).resolve()
+        )
+
+    rules_path = data["functional_complementarity"].get(
+        "rules_path"
+    )
+    if rules_path is not None:
+        data["functional_complementarity"]["rules_path"] = str(
+            (fixture_dir / rules_path).resolve()
+        )
+
+    data["output"]["directory"] = str(tmp_path / "generated")
+
+    target = tmp_path / "config.yaml"
+    target.write_text(
+        yaml.safe_dump(data, sort_keys=False),
+        encoding="utf-8",
+    )
+    return target
 
 
 def test_pipeline_gene_context_scores_and_jsonl_round_trip(
     valid_config_path: Path, tmp_path: Path
 ) -> None:
-    result = InteractionCandidatePipeline().run(e2e_config(valid_config_path, tmp_path))
+    result = InteractionCandidatePipeline().run(
+        e2e_config(valid_config_path, tmp_path)
+    )
     assert len(result.bundles) == 12
+
     for bundle in result.bundles:
         assert len(bundle.genome_context) == 1
-        assert bundle.engine_statuses["gene_context"] is bundle.genome_context[0].status
+        assert (
+            bundle.engine_statuses["gene_context"]
+            is bundle.genome_context[0].status
+        )
 
         assert len(bundle.operon) == 1
-        assert bundle.engine_statuses["operon"] is bundle.operon[0].status
+        assert (
+            bundle.engine_statuses["operon"]
+            is bundle.operon[0].status
+        )
+
+        assert len(bundle.functional) >= 1
+        assert (
+            bundle.engine_statuses["functional_complementarity"]
+            is bundle.functional[0].status
+        )
 
         assert all(
             status is EvidenceStatus.NOT_RUN
             for engine, status in bundle.engine_statuses.items()
-            if engine not in {"gene_context", "operon"}
+            if engine
+            not in {
+                "gene_context",
+                "operon",
+                "functional_complementarity",
+            }
         )
+
         scores = bundle.score.model_dump()
-        assert all(value is None for key, value in scores.items() if key.endswith("_score"))
+        assert all(
+            value is None
+            for key, value in scores.items()
+            if key.endswith("_score")
+        )
         assert bundle.score.contradiction_penalty is None
         assert bundle.score.evidence_completeness is None
         assert bundle.evidence_tier is None
-    assert JsonlEvidenceBundleWriter().read(result.evidence_path) == result.bundles
+
+    assert (
+        JsonlEvidenceBundleWriter().read(result.evidence_path)
+        == result.bundles
+    )
     assert all(
         CandidateEvidenceBundle.model_validate_json(line)
-        for line in result.evidence_path.read_text(encoding="utf-8").splitlines()
+        for line in result.evidence_path.read_text(
+            encoding="utf-8"
+        ).splitlines()
     )
 
 

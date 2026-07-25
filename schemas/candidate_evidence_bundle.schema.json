@@ -712,6 +712,39 @@
     "FunctionalEvidence": {
       "additionalProperties": false,
       "properties": {
+        "calculation_rule_version": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Calculation Rule Version"
+        },
+        "candidate_annotation_text": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Candidate Annotation Text"
+        },
+        "candidate_matched_terms": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Candidate Matched Terms",
+          "type": "array"
+        },
         "candidate_role": {
           "anyOf": [
             {
@@ -724,6 +757,25 @@
           ],
           "default": null,
           "title": "Candidate Role"
+        },
+        "conflicting_terms": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Conflicting Terms",
+          "type": "array"
+        },
+        "matched": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Matched"
         },
         "origin": {
           "$ref": "#/$defs/EvidenceOrigin",
@@ -749,6 +801,26 @@
           ],
           "default": null,
           "title": "Quality"
+        },
+        "query_annotation_text": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Query Annotation Text"
+        },
+        "query_matched_terms": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Query Matched Terms",
+          "type": "array"
         },
         "query_role": {
           "anyOf": [
@@ -786,6 +858,19 @@
           ],
           "default": null,
           "title": "Rule Id"
+        },
+        "ruleset_path": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ruleset Path"
         },
         "status": {
           "$ref": "#/$defs/EvidenceStatus",

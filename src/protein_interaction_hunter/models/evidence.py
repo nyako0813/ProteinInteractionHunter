@@ -129,11 +129,19 @@ class DomainEvidence(BaseEvidence):
 
 
 class FunctionalEvidence(BaseEvidence):
+    calculation_rule_version: NonEmptyStr | None = None
     query_role: NonEmptyStr | None = None
     candidate_role: NonEmptyStr | None = None
     relationship_hint: PredictedRelationshipType | None = None
     rule_id: NonEmptyStr | None = None
+    query_matched_terms: list[str] = Field(default_factory=list)
+    candidate_matched_terms: list[str] = Field(default_factory=list)
     support_terms: list[str] = Field(default_factory=list)
+    conflicting_terms: list[str] = Field(default_factory=list)
+    query_annotation_text: NonEmptyStr | None = None
+    candidate_annotation_text: NonEmptyStr | None = None
+    ruleset_path: NonEmptyStr | None = None
+    matched: bool | None = None
 
 
 class LocalizationEvidence(BaseEvidence):

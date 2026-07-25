@@ -12,8 +12,15 @@ from pydantic import Field
 
 from protein_interaction_hunter.adapters.local.annotation import LocalAnnotationTsvLoader
 from protein_interaction_hunter.adapters.local.fasta import LocalFastaLoader
+from protein_interaction_hunter.adapters.local.functional_rules import (
+    LocalFunctionalRulesLoader,
+)
 from protein_interaction_hunter.adapters.local.gff import LocalGff3Loader
 from protein_interaction_hunter.application.candidates import generate_candidates
+from protein_interaction_hunter.application.functional_complementarity import (
+    FUNCTIONAL_COMPLEMENTARITY_ENGINE_VERSION,
+    evaluate_functional_complementarity,
+)
 from protein_interaction_hunter.application.gene_context import (
     GENE_CONTEXT_RULE_VERSION,
     build_coordinate_index,
@@ -39,6 +46,7 @@ from protein_interaction_hunter.models.enums import (
 from protein_interaction_hunter.models.evidence import (
     CandidateEvidenceBundle,
     EvidenceProvenance,
+    FunctionalEvidence,
     GenomeContextEvidence,
     OperonEvidence,
 )
@@ -56,7 +64,6 @@ _UNIMPLEMENTED_ENGINES = (
     "orthology",
     "phylogenetic_profile",
     "domains",
-    "functional_complementarity",
     "localization",
     "fusion",
     "known_interactions",
@@ -111,6 +118,26 @@ def _git_commit(repository: Path) -> str | None:
         return None
     return result.stdout.strip() or None
 
+def _functional_annotation_text(
+    protein_id: str,
+    annotation_by_protein: dict[str, AnnotationRecord],
+    description_by_protein: dict[str, str],
+) -> str | None:
+    annotation = annotation_by_protein.get(protein_id)
+
+    values = [
+        annotation.product if annotation else None,
+        annotation.functional_category if annotation else None,
+        description_by_protein.get(protein_id),
+    ]
+
+    text = " | ".join(
+        value.strip()
+        for value in values
+        if value is not None and value.strip()
+    )
+
+    return text or None
 
 def _policy_settings(config: AppConfig) -> dict[str, str | int | bool]:
     policy = config.candidate_generation
@@ -224,6 +251,66 @@ def _excel_operon_rows(
 
     return rows
 
+def _excel_functional_rows(
+    run_id: str,
+    functional_evidence: dict[
+        tuple[str, str],
+        list[FunctionalEvidence],
+    ],
+) -> list[dict[str, object]]:
+    rows: list[dict[str, object]] = []
+
+    for (query_id, candidate_id), evidence_records in sorted(
+        functional_evidence.items()
+    ):
+        for evidence in evidence_records:
+            rows.append(
+                {
+                    "Run_ID": run_id,
+                    "Query_ID": query_id,
+                    "Candidate_ID": candidate_id,
+                    "Status": evidence.status,
+                    "Matched": evidence.matched,
+                    "Query_Role": evidence.query_role,
+                    "Candidate_Role": evidence.candidate_role,
+                    "Relationship_Hint": evidence.relationship_hint,
+                    "Rule_ID": evidence.rule_id,
+                    "Query_Matched_Terms": "|".join(
+                        evidence.query_matched_terms
+                    ),
+                    "Candidate_Matched_Terms": "|".join(
+                        evidence.candidate_matched_terms
+                    ),
+                    "Support_Terms": "|".join(
+                        evidence.support_terms
+                    ),
+                    "Conflicting_Terms": "|".join(
+                        evidence.conflicting_terms
+                    ),
+                    "Query_Annotation_Text": (
+                        evidence.query_annotation_text
+                    ),
+                    "Candidate_Annotation_Text": (
+                        evidence.candidate_annotation_text
+                    ),
+                    "Rule_Version": (
+                        evidence.calculation_rule_version
+                    ),
+                    "Ruleset_Path": evidence.ruleset_path,
+                    "Warnings": "|".join(evidence.warnings),
+                    "Provenance": "|".join(
+                        (
+                            f"{item.source_name}:"
+                            f"{item.source_version or ''}:"
+                            f"{item.method or ''}"
+                        )
+                        for item in evidence.provenance
+                    ),
+                }
+            )
+
+    return rows
+
 class InteractionCandidatePipeline:
     """Generate auditable candidates and coordinate-derived context without scoring."""
 
@@ -278,6 +365,60 @@ class InteractionCandidatePipeline:
                     config.gene_context.operon_proxy_max_intergenic_bp,
                 )
 
+        functional_evidence: dict[
+            tuple[str, str],
+            list[FunctionalEvidence],
+        ] = {}
+
+        if config.functional_complementarity.enabled:
+            rules_path = config.functional_complementarity.rules_path
+            if rules_path is None:
+                raise InputValidationError(
+                    "functional_complementarity.rules_path is required "
+                    "when functional_complementarity.enabled is true"
+                )
+
+            functional_rules = LocalFunctionalRulesLoader().load(
+                rules_path
+            )
+            annotation_by_protein = {
+                annotation.protein_id: annotation
+                for annotation in annotations
+            }
+            description_by_protein = {
+                protein.protein_id: protein.description
+                for protein in proteins
+            }
+
+            for candidate in generated.candidates:
+                pair = (
+                    candidate.query_id,
+                    candidate.protein_id,
+                )
+                query_protein_id = canonical_query_ids[
+                    candidate.query_id
+                ]
+
+                query_text = _functional_annotation_text(
+                    query_protein_id,
+                    annotation_by_protein,
+                    description_by_protein,
+                )
+                candidate_text = _functional_annotation_text(
+                    candidate.protein_id,
+                    annotation_by_protein,
+                    description_by_protein,
+                )
+
+                functional_evidence[pair] = (
+                    evaluate_functional_complementarity(
+                        query_text,
+                        candidate_text,
+                        functional_rules,
+                        rules_path,
+                    )
+                )
+
         config_hash = build_input_file_manifest(
             "config", resolved_config_path, required=True
         ).sha256
@@ -298,13 +439,28 @@ class InteractionCandidatePipeline:
             pair = (candidate.query_id, candidate.protein_id)
             context = contexts.get(pair)
             operon = operons.get(pair)
-            statuses = {engine: EvidenceStatus.NOT_RUN for engine in _UNIMPLEMENTED_ENGINES}
+            functional = functional_evidence.get(pair, [])
+            statuses = {
+                engine: EvidenceStatus.NOT_RUN
+                for engine in _UNIMPLEMENTED_ENGINES
+            }
+            statuses["functional_complementarity"] = (
+                functional[0].status
+                if functional
+                else EvidenceStatus.NOT_RUN
+            )
             statuses["gene_context"] = context.status if context else EvidenceStatus.NOT_RUN
             statuses["operon"] = operon.status if operon else EvidenceStatus.NOT_RUN
             context_warnings = context.warnings if context else []
             operon_warnings = operon.warnings if operon else []
+            functional_warnings = [
+                warning
+                for evidence in functional
+                for warning in evidence.warnings
+            ]
             bundles.append(
                 CandidateEvidenceBundle(
+                    functional=functional,
                     run_id=run_id,
                     query_id=candidate.query_id,
                     candidate_id=candidate.protein_id,
@@ -317,7 +473,12 @@ class InteractionCandidatePipeline:
                     provenance=[provenance],
                     policy_settings=policies,
                     warnings=sorted(
-                        set(candidate.warnings + context_warnings + operon_warnings)
+                        set(
+                            candidate.warnings
+                            + context_warnings
+                            + operon_warnings
+                            + functional_warnings
+                        )
                     ),
                 )
             )
@@ -330,6 +491,7 @@ class InteractionCandidatePipeline:
             output_path / "candidate_table.tsv",
             contexts=contexts,
             operons=operons,
+            functional=functional_evidence,
         )
         all_warnings = [warning for bundle in bundles for warning in bundle.warnings]
         warning_summary_path = WarningSummaryTsvWriter().write(
@@ -342,6 +504,10 @@ class InteractionCandidatePipeline:
                 rows_by_sheet={
                     "Gene_Context": _excel_context_rows(run_id, contexts),
                     "Operon_Proxy": _excel_operon_rows(run_id, operons),
+                    "Functional_Complementarity": _excel_functional_rows(
+                        run_id,
+                        functional_evidence,
+                    ),
                 },
             )
         input_files = [
@@ -370,10 +536,17 @@ class InteractionCandidatePipeline:
         manifest.gene_context_rule_version = (
             GENE_CONTEXT_RULE_VERSION if config.gene_context.enabled else None
         )
+
         if config.gene_context.enabled:
             manifest.policy_settings["operon_proxy_rule_version"] = (
                 OPERON_PROXY_RULE_VERSION
             )
+
+        if config.functional_complementarity.enabled:
+            manifest.policy_settings[
+                "functional_complementarity_rule_version"
+            ] = FUNCTIONAL_COMPLEMENTARITY_ENGINE_VERSION
+
         manifest.policy_settings = policies | manifest.policy_settings
         manifest.warnings = sorted(set(all_warnings))
         manifest.parser_warnings = sorted(
