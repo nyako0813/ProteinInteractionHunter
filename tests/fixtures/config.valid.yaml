@@ -1,0 +1,70 @@
+project:
+  name: ProteinInteractionHunter
+  run_name: synthetic_fixture
+  random_seed: 0
+  local_only: true
+input:
+  proteome_fasta: synthetic_proteome.fasta
+  genome_gff: synthetic_genome.gff3
+  annotation_table: synthetic_annotations.tsv
+  reference_proteomes: []
+query:
+  protein_ids: [QUERY_001]
+  allow_multiple: true
+candidate_generation:
+  include_hypothetical_proteins: true
+  include_missing_coordinates: true
+  minimum_length_aa: 20
+  duplicate_sequence_policy: flag
+  fragment_policy: flag
+  self_candidate_policy: exclude
+gene_context:
+  enabled: false
+  neighborhood_gene_count: 5
+  operon_proxy_max_intergenic_bp: 200
+orthology:
+  enabled: false
+  engine: blast
+  database: null
+phylogenetic_profile:
+  enabled: false
+domains:
+  enabled: false
+  source: none
+functional_complementarity:
+  enabled: false
+  rules_path: null
+localization:
+  enabled: false
+  source: annotation_only
+known_interactions:
+  enabled: false
+  local_table: null
+  external_services: []
+scoring:
+  enabled: false
+  deterministic_tie_breaker:
+    - total_ranking_score
+    - evidence_completeness
+    - candidate_id
+evidence_tiers:
+  enabled: false
+structure_prediction_queue:
+  enabled: true
+  maximum_entries: 20
+  write_pair_fasta: true
+  automatic_structure_prediction: false
+output:
+  directory: output
+  write_jsonl: true
+  write_tsv: true
+  write_excel: true
+  write_config_snapshot: true
+cache:
+  enabled: true
+  directory: .cache
+logging:
+  level: INFO
+  directory: logs
+performance:
+  workers: 1

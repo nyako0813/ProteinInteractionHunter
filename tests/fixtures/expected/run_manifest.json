@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0",
+  "run_id": "fixture-run",
+  "run_name": "synthetic_fixture",
+  "started_at": "2026-07-25T00:00:00+00:00",
+  "completed_at": null,
+  "status": "initialized",
+  "command_line": ["protein-interaction-hunter", "validate-inputs"],
+  "working_directory": ".",
+  "config_path": "config.valid.yaml",
+  "config_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+  "config_snapshot_path": null,
+  "input_files": [],
+  "python_version": "3.12.3",
+  "platform": "synthetic",
+  "package_version": "0.1.0",
+  "dependency_versions": {},
+  "git_commit": null,
+  "random_seed": 0,
+  "warnings": [],
+  "incomplete_evidence_flags": ["all_analysis_engines_not_run"]
+}

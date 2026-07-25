@@ -1,0 +1,254 @@
+{
+  "$defs": {
+    "EvidenceTier": {
+      "enum": [
+        "tier_a_strong_multi_evidence",
+        "tier_b_moderate",
+        "tier_c_exploratory",
+        "tier_d_context_only",
+        "tier_e_insufficient",
+        "tier_x_conflicting"
+      ],
+      "title": "EvidenceTier",
+      "type": "string"
+    },
+    "ManualReviewStatus": {
+      "enum": [
+        "not_reviewed",
+        "queued",
+        "approved",
+        "deferred",
+        "rejected",
+        "completed"
+      ],
+      "title": "ManualReviewStatus",
+      "type": "string"
+    },
+    "ManualStructurePriority": {
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "urgent_review"
+      ],
+      "title": "ManualStructurePriority",
+      "type": "string"
+    },
+    "PredictedRelationshipType": {
+      "enum": [
+        "physical_complex",
+        "transient_interaction",
+        "enzyme_substrate",
+        "accessory_factor",
+        "pathway_association",
+        "gene_context_only",
+        "functional_similarity",
+        "insufficient_evidence"
+      ],
+      "title": "PredictedRelationshipType",
+      "type": "string"
+    }
+  },
+  "$id": "https://schemas.protein-interaction-hunter.local/structure_prediction_queue/1.0",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "A proposal for manual review; component flags are suggestions, not assertions.",
+  "properties": {
+    "candidate_fasta_path": {
+      "format": "path",
+      "title": "Candidate Fasta Path",
+      "type": "string"
+    },
+    "candidate_id": {
+      "minLength": 1,
+      "title": "Candidate Id",
+      "type": "string"
+    },
+    "candidate_name": {
+      "minLength": 1,
+      "title": "Candidate Name",
+      "type": "string"
+    },
+    "evidence_tier": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/EvidenceTier"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "functional_association_score": {
+      "anyOf": [
+        {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Functional Association Score"
+    },
+    "include_cofactor": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Include Cofactor"
+    },
+    "include_dna": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Include Dna"
+    },
+    "include_ligand": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Include Ligand"
+    },
+    "include_metal": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Include Metal"
+    },
+    "include_rna": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Include Rna"
+    },
+    "main_contradiction": {
+      "default": "",
+      "title": "Main Contradiction",
+      "type": "string"
+    },
+    "manual_notes": {
+      "default": "",
+      "title": "Manual Notes",
+      "type": "string"
+    },
+    "manual_review_status": {
+      "$ref": "#/$defs/ManualReviewStatus",
+      "default": "not_reviewed"
+    },
+    "manual_structure_priority": {
+      "$ref": "#/$defs/ManualStructurePriority"
+    },
+    "pair_fasta_path": {
+      "format": "path",
+      "title": "Pair Fasta Path",
+      "type": "string"
+    },
+    "physical_interaction_score": {
+      "anyOf": [
+        {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Physical Interaction Score"
+    },
+    "predicted_relationship_type": {
+      "$ref": "#/$defs/PredictedRelationshipType"
+    },
+    "primary_supporting_evidence": {
+      "minLength": 1,
+      "title": "Primary Supporting Evidence",
+      "type": "string"
+    },
+    "query_fasta_path": {
+      "format": "path",
+      "title": "Query Fasta Path",
+      "type": "string"
+    },
+    "query_id": {
+      "minLength": 1,
+      "title": "Query Id",
+      "type": "string"
+    },
+    "rank": {
+      "minimum": 1,
+      "title": "Rank",
+      "type": "integer"
+    },
+    "reason_for_structural_test": {
+      "minLength": 1,
+      "title": "Reason For Structural Test",
+      "type": "string"
+    },
+    "schema_version": {
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "suggested_stoichiometry": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Suggested Stoichiometry"
+    }
+  },
+  "required": [
+    "rank",
+    "query_id",
+    "candidate_id",
+    "candidate_name",
+    "predicted_relationship_type",
+    "manual_structure_priority",
+    "query_fasta_path",
+    "candidate_fasta_path",
+    "pair_fasta_path",
+    "reason_for_structural_test",
+    "primary_supporting_evidence"
+  ],
+  "title": "StructurePredictionQueueEntry",
+  "type": "object"
+}

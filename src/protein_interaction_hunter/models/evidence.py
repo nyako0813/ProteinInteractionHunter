@@ -1,0 +1,148 @@
+"""Evidence records capable of representing unavailable and unrun engines."""
+
+from typing import Annotated, Any
+
+from pydantic import Field, StringConstraints
+
+from protein_interaction_hunter.models.base import StrictModel
+from protein_interaction_hunter.models.enums import (
+    CandidateDisposition,
+    ContradictionSeverity,
+    EvidenceOrigin,
+    EvidenceStatus,
+    EvidenceTier,
+    PredictedRelationshipType,
+)
+from protein_interaction_hunter.models.scoring import CandidateScore
+from protein_interaction_hunter.schemas.versions import SchemaName, schema_version
+
+NonEmptyStr = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+
+
+class EvidenceProvenance(StrictModel):
+    source_name: NonEmptyStr
+    source_version: NonEmptyStr | None = None
+    source_record_id: NonEmptyStr | None = None
+    method: NonEmptyStr | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class BaseEvidence(StrictModel):
+    status: EvidenceStatus = EvidenceStatus.NOT_RUN
+    origin: EvidenceOrigin = EvidenceOrigin.INFERRED
+    quality: float | None = Field(default=None, ge=0.0, le=1.0)
+    provenance: list[EvidenceProvenance] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
+
+
+class GenomeContextEvidence(BaseEvidence):
+    same_seqid: bool | None = None
+    distance_bp: int | None = Field(default=None, ge=0)
+    intervening_gene_count: int | None = Field(default=None, ge=0)
+    strand_relation: str | None = None
+    boundary_flags: list[str] = Field(default_factory=list)
+
+
+class OperonEvidence(BaseEvidence):
+    same_strand: bool | None = None
+    intergenic_distance_bp: int | None = None
+    proxy_rule_id: NonEmptyStr | None = None
+    support: float | None = Field(default=None, ge=0.0, le=1.0)
+
+
+class OrthologRecord(BaseEvidence):
+    protein_id: NonEmptyStr
+    reference_id: NonEmptyStr
+    ortholog_id: NonEmptyStr | None = None
+    identity: float | None = Field(default=None, ge=0.0, le=1.0)
+    query_coverage: float | None = Field(default=None, ge=0.0, le=1.0)
+    subject_coverage: float | None = Field(default=None, ge=0.0, le=1.0)
+    evalue: float | None = Field(default=None, ge=0.0)
+    orthogroup: NonEmptyStr | None = None
+    paralog_ambiguity: bool = False
+
+
+class PhylogeneticProfileEvidence(BaseEvidence):
+    informative_taxa: int | None = Field(default=None, ge=0)
+    missing_rate: float | None = Field(default=None, ge=0.0, le=1.0)
+    raw_similarity: float | None = Field(default=None, ge=-1.0, le=1.0)
+    corrected_similarity: float | None = Field(default=None, ge=-1.0, le=1.0)
+
+
+class DomainEvidence(BaseEvidence):
+    protein_id: NonEmptyStr
+    accession: NonEmptyStr | None = None
+    name: NonEmptyStr | None = None
+    start: int | None = Field(default=None, ge=1)
+    end: int | None = Field(default=None, ge=1)
+    role: NonEmptyStr | None = None
+    pair_rule_id: NonEmptyStr | None = None
+    is_shared: bool | None = None
+
+
+class FunctionalEvidence(BaseEvidence):
+    query_role: NonEmptyStr | None = None
+    candidate_role: NonEmptyStr | None = None
+    relationship_hint: PredictedRelationshipType | None = None
+    rule_id: NonEmptyStr | None = None
+    support_terms: list[str] = Field(default_factory=list)
+
+
+class LocalizationEvidence(BaseEvidence):
+    protein_id: NonEmptyStr
+    compartment: NonEmptyStr | None = None
+    signal_peptide: bool | None = None
+    transmembrane_helices: int | None = Field(default=None, ge=0)
+    topology: NonEmptyStr | None = None
+    compatibility: bool | None = None
+
+
+class FusionEvidence(BaseEvidence):
+    fused_protein_id: NonEmptyStr | None = None
+    reference_id: NonEmptyStr | None = None
+    query_region: tuple[int, int] | None = None
+    candidate_region: tuple[int, int] | None = None
+    taxonomic_support_count: int | None = Field(default=None, ge=0)
+
+
+class KnownInteractionEvidence(BaseEvidence):
+    protein_a: NonEmptyStr
+    protein_b: NonEmptyStr
+    interaction_type: NonEmptyStr | None = None
+    detection_method: NonEmptyStr | None = None
+    publication_id: NonEmptyStr | None = None
+    taxonomic_distance: NonEmptyStr | None = None
+
+
+class ContradictionEvidence(BaseEvidence):
+    contradiction_type: NonEmptyStr
+    severity: ContradictionSeverity
+    penalty: float | None = Field(default=None, ge=0.0, le=1.0)
+    hard_exclusion: bool = False
+    explanation: NonEmptyStr
+
+
+class CandidateEvidenceBundle(StrictModel):
+    schema_version: str = Field(
+        default_factory=lambda: schema_version(SchemaName.CANDIDATE_EVIDENCE_BUNDLE)
+    )
+    run_id: NonEmptyStr
+    query_id: NonEmptyStr
+    candidate_id: NonEmptyStr
+    candidate_disposition: CandidateDisposition
+    predicted_relationship_type: PredictedRelationshipType
+    evidence_tier: EvidenceTier | None = None
+    genome_context: list[GenomeContextEvidence] = Field(default_factory=list)
+    operon: list[OperonEvidence] = Field(default_factory=list)
+    orthology: list[OrthologRecord] = Field(default_factory=list)
+    phylogenetic_profile: list[PhylogeneticProfileEvidence] = Field(default_factory=list)
+    domains: list[DomainEvidence] = Field(default_factory=list)
+    functional: list[FunctionalEvidence] = Field(default_factory=list)
+    localization: list[LocalizationEvidence] = Field(default_factory=list)
+    fusion: list[FusionEvidence] = Field(default_factory=list)
+    known_interactions: list[KnownInteractionEvidence] = Field(default_factory=list)
+    contradictions: list[ContradictionEvidence] = Field(default_factory=list)
+    score: CandidateScore = Field(default_factory=CandidateScore)
+    engine_statuses: dict[str, EvidenceStatus] = Field(default_factory=dict)
+    provenance: list[EvidenceProvenance] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)

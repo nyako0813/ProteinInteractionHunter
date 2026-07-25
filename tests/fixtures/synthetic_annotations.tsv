@@ -1,0 +1,12 @@
+protein_id	gene_name	locus_tag	product	functional_category	localization_annotation	transmembrane_annotation	annotation_source	annotation_confidence
+QUERY_001	qryA	LT0001	query enzyme	enzyme	cytosolic	none	synthetic_curated	0.95
+NEAR_001	accA	LT0002	accessory candidate	accessory factor	cytosolic	none	synthetic_curated	0.85
+REVERSE_001	revA	LT0003	reverse candidate	unknown			synthetic_unreviewed	0.40
+OVERLAP_001	ovlA	LT0004	overlapping protein	unknown	cytosolic	none	synthetic_curated	0.70
+HYP_001		LT0005	hypothetical protein				synthetic_unreviewed	
+MEM_001	memA	LT0006	putative membrane protein	transporter	membrane	multi-pass	synthetic_curated	0.80
+DUP_001	dupA	LT0007	duplicate locus protein	unknown	cytosolic	none	synthetic_curated	0.60
+FRAG_001		LT0008	short fragment				synthetic_unreviewed	0.20
+PARA_001	paraA	LT0009	probable query paralog	enzyme	cytosolic	none	synthetic_curated	0.75
+CONTIG2_001	ctgA	LT0011	separate contig protein	unknown			synthetic_unreviewed	0.30
+HOUSE_001	hskA	LT0012	housekeeping protein	housekeeping	cytosolic	none	synthetic_curated	0.90

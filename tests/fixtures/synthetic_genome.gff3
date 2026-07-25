@@ -1,0 +1,24 @@
+##gff-version 3
+contig1	synthetic	gene	50	220	.	+	.	ID=gene_query;locus_tag=LT0001;old_locus_tag=OLD0001
+contig1	synthetic	CDS	50	220	.	+	0	ID=cds_query;Parent=gene_query;protein_id=QUERY_001;locus_tag=LT0001
+contig1	synthetic	gene	250	420	.	+	.	ID=gene_near;locus_tag=LT0002
+contig1	synthetic	CDS	250	420	.	+	0	ID=cds_near;Parent=gene_near;protein_id=NEAR_001;locus_tag=LT0002
+contig1	synthetic	gene	450	620	.	-	.	ID=gene_reverse;locus_tag=LT0003
+contig1	synthetic	CDS	450	620	.	-	0	ID=cds_reverse;Parent=gene_reverse;protein_id=REVERSE_001;locus_tag=LT0003
+contig1	synthetic	gene	600	770	.	+	.	ID=gene_overlap;locus_tag=LT0004
+contig1	synthetic	CDS	600	770	.	+	0	ID=cds_overlap;Parent=gene_overlap;protein_id=OVERLAP_001;locus_tag=LT0004
+contig1	synthetic	gene	900	1070	.	+	.	ID=gene_hyp;locus_tag=LT0005
+contig1	synthetic	CDS	900	1070	.	+	0	ID=cds_hyp;Parent=gene_hyp;protein_id=HYP_001;locus_tag=LT0005
+contig1	synthetic	gene	1100	1270	.	+	.	ID=gene_mem;locus_tag=LT0006
+contig1	synthetic	CDS	1100	1270	.	+	0	ID=cds_mem;Parent=gene_mem;protein_id=MEM_001;locus_tag=LT0006
+contig1	synthetic	gene	1300	1470	.	+	.	ID=gene_dup;locus_tag=LT0007
+contig1	synthetic	CDS	1300	1470	.	+	0	ID=cds_dup;Parent=gene_dup;protein_id=DUP_001;locus_tag=LT0007
+contig1	synthetic	gene	2000	2170	.	+	.	ID=gene_para;locus_tag=LT0009
+contig1	synthetic	CDS	2000	2170	.	+	0	ID=cds_para;Parent=gene_para;protein_id=PARA_001;locus_tag=LT0009
+contig1	synthetic	gene	30000	30170	.	+	.	ID=gene_far;locus_tag=LT0010
+contig1	synthetic	CDS	30000	30170	.	+	0	ID=cds_far;Parent=gene_far;protein_id=FAR_001;locus_tag=LT0010
+contig1	synthetic	gene	49900	50000	.	+	.	ID=gene_house;locus_tag=LT0012
+contig1	synthetic	CDS	49900	50000	.	+	0	ID=cds_house;Parent=gene_house;protein_id=HOUSE_001;locus_tag=LT0012
+contig2	synthetic	gene	40	210	.	-	.	ID=gene_contig2;locus_tag=LT0011
+contig2	synthetic	CDS	40	210	.	-	0	ID=cds_contig2;Parent=gene_contig2;protein_id=CONTIG2_001;locus_tag=LT0011;Note=URL%20decoded
+contig2	synthetic	gene	400	520	.	+	.	ID=gene_optional

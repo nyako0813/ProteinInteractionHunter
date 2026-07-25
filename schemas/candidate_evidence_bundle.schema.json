@@ -1,0 +1,1515 @@
+{
+  "$defs": {
+    "CandidateDisposition": {
+      "enum": [
+        "included",
+        "down_ranked",
+        "flagged",
+        "excluded"
+      ],
+      "title": "CandidateDisposition",
+      "type": "string"
+    },
+    "CandidateScore": {
+      "additionalProperties": false,
+      "properties": {
+        "annotation_confidence_score": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Annotation Confidence Score"
+        },
+        "calculation_trace": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Calculation Trace",
+          "type": "array"
+        },
+        "contradiction_penalty": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Contradiction Penalty"
+        },
+        "evidence_completeness": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Evidence Completeness"
+        },
+        "evolutionary_coupling_score": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Evolutionary Coupling Score"
+        },
+        "functional_association_score": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Functional Association Score"
+        },
+        "gene_context_score": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Gene Context Score"
+        },
+        "physical_interaction_score": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Physical Interaction Score"
+        },
+        "total_ranking_score": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Total Ranking Score"
+        },
+        "warnings": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "title": "CandidateScore",
+      "type": "object"
+    },
+    "ContradictionEvidence": {
+      "additionalProperties": false,
+      "properties": {
+        "contradiction_type": {
+          "minLength": 1,
+          "title": "Contradiction Type",
+          "type": "string"
+        },
+        "explanation": {
+          "minLength": 1,
+          "title": "Explanation",
+          "type": "string"
+        },
+        "hard_exclusion": {
+          "default": false,
+          "title": "Hard Exclusion",
+          "type": "boolean"
+        },
+        "origin": {
+          "$ref": "#/$defs/EvidenceOrigin",
+          "default": "inferred"
+        },
+        "penalty": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Penalty"
+        },
+        "provenance": {
+          "items": {
+            "$ref": "#/$defs/EvidenceProvenance"
+          },
+          "title": "Provenance",
+          "type": "array"
+        },
+        "quality": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Quality"
+        },
+        "severity": {
+          "$ref": "#/$defs/ContradictionSeverity"
+        },
+        "status": {
+          "$ref": "#/$defs/EvidenceStatus",
+          "default": "not_run"
+        },
+        "warnings": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "contradiction_type",
+        "severity",
+        "explanation"
+      ],
+      "title": "ContradictionEvidence",
+      "type": "object"
+    },
+    "ContradictionSeverity": {
+      "enum": [
+        "info",
+        "low",
+        "medium",
+        "high",
+        "critical"
+      ],
+      "title": "ContradictionSeverity",
+      "type": "string"
+    },
+    "DomainEvidence": {
+      "additionalProperties": false,
+      "properties": {
+        "accession": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Accession"
+        },
+        "end": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "End"
+        },
+        "is_shared": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Is Shared"
+        },
+        "name": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Name"
+        },
+        "origin": {
+          "$ref": "#/$defs/EvidenceOrigin",
+          "default": "inferred"
+        },
+        "pair_rule_id": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Pair Rule Id"
+        },
+        "protein_id": {
+          "minLength": 1,
+          "title": "Protein Id",
+          "type": "string"
+        },
+        "provenance": {
+          "items": {
+            "$ref": "#/$defs/EvidenceProvenance"
+          },
+          "title": "Provenance",
+          "type": "array"
+        },
+        "quality": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Quality"
+        },
+        "role": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Role"
+        },
+        "start": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Start"
+        },
+        "status": {
+          "$ref": "#/$defs/EvidenceStatus",
+          "default": "not_run"
+        },
+        "warnings": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "protein_id"
+      ],
+      "title": "DomainEvidence",
+      "type": "object"
+    },
+    "EvidenceOrigin": {
+      "enum": [
+        "exact_protein",
+        "exact_pair",
+        "ortholog_transferred",
+        "annotation",
+        "local_prediction",
+        "inferred"
+      ],
+      "title": "EvidenceOrigin",
+      "type": "string"
+    },
+    "EvidenceProvenance": {
+      "additionalProperties": false,
+      "properties": {
+        "metadata": {
+          "additionalProperties": true,
+          "title": "Metadata",
+          "type": "object"
+        },
+        "method": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Method"
+        },
+        "source_name": {
+          "minLength": 1,
+          "title": "Source Name",
+          "type": "string"
+        },
+        "source_record_id": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Record Id"
+        },
+        "source_version": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Version"
+        }
+      },
+      "required": [
+        "source_name"
+      ],
+      "title": "EvidenceProvenance",
+      "type": "object"
+    },
+    "EvidenceStatus": {
+      "enum": [
+        "available",
+        "missing",
+        "not_applicable",
+        "failed",
+        "not_run"
+      ],
+      "title": "EvidenceStatus",
+      "type": "string"
+    },
+    "EvidenceTier": {
+      "enum": [
+        "tier_a_strong_multi_evidence",
+        "tier_b_moderate",
+        "tier_c_exploratory",
+        "tier_d_context_only",
+        "tier_e_insufficient",
+        "tier_x_conflicting"
+      ],
+      "title": "EvidenceTier",
+      "type": "string"
+    },
+    "FunctionalEvidence": {
+      "additionalProperties": false,
+      "properties": {
+        "candidate_role": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Candidate Role"
+        },
+        "origin": {
+          "$ref": "#/$defs/EvidenceOrigin",
+          "default": "inferred"
+        },
+        "provenance": {
+          "items": {
+            "$ref": "#/$defs/EvidenceProvenance"
+          },
+          "title": "Provenance",
+          "type": "array"
+        },
+        "quality": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Quality"
+        },
+        "query_role": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Query Role"
+        },
+        "relationship_hint": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PredictedRelationshipType"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "rule_id": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Rule Id"
+        },
+        "status": {
+          "$ref": "#/$defs/EvidenceStatus",
+          "default": "not_run"
+        },
+        "support_terms": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Support Terms",
+          "type": "array"
+        },
+        "warnings": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "title": "FunctionalEvidence",
+      "type": "object"
+    },
+    "FusionEvidence": {
+      "additionalProperties": false,
+      "properties": {
+        "candidate_region": {
+          "anyOf": [
+            {
+              "maxItems": 2,
+              "minItems": 2,
+              "prefixItems": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "integer"
+                }
+              ],
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Candidate Region"
+        },
+        "fused_protein_id": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Fused Protein Id"
+        },
+        "origin": {
+          "$ref": "#/$defs/EvidenceOrigin",
+          "default": "inferred"
+        },
+        "provenance": {
+          "items": {
+            "$ref": "#/$defs/EvidenceProvenance"
+          },
+          "title": "Provenance",
+          "type": "array"
+        },
+        "quality": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Quality"
+        },
+        "query_region": {
+          "anyOf": [
+            {
+              "maxItems": 2,
+              "minItems": 2,
+              "prefixItems": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "integer"
+                }
+              ],
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Query Region"
+        },
+        "reference_id": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reference Id"
+        },
+        "status": {
+          "$ref": "#/$defs/EvidenceStatus",
+          "default": "not_run"
+        },
+        "taxonomic_support_count": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Taxonomic Support Count"
+        },
+        "warnings": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "title": "FusionEvidence",
+      "type": "object"
+    },
+    "GenomeContextEvidence": {
+      "additionalProperties": false,
+      "properties": {
+        "boundary_flags": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Boundary Flags",
+          "type": "array"
+        },
+        "distance_bp": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Distance Bp"
+        },
+        "intervening_gene_count": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Intervening Gene Count"
+        },
+        "origin": {
+          "$ref": "#/$defs/EvidenceOrigin",
+          "default": "inferred"
+        },
+        "provenance": {
+          "items": {
+            "$ref": "#/$defs/EvidenceProvenance"
+          },
+          "title": "Provenance",
+          "type": "array"
+        },
+        "quality": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Quality"
+        },
+        "same_seqid": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Same Seqid"
+        },
+        "status": {
+          "$ref": "#/$defs/EvidenceStatus",
+          "default": "not_run"
+        },
+        "strand_relation": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Strand Relation"
+        },
+        "warnings": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "title": "GenomeContextEvidence",
+      "type": "object"
+    },
+    "KnownInteractionEvidence": {
+      "additionalProperties": false,
+      "properties": {
+        "detection_method": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Detection Method"
+        },
+        "interaction_type": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Interaction Type"
+        },
+        "origin": {
+          "$ref": "#/$defs/EvidenceOrigin",
+          "default": "inferred"
+        },
+        "protein_a": {
+          "minLength": 1,
+          "title": "Protein A",
+          "type": "string"
+        },
+        "protein_b": {
+          "minLength": 1,
+          "title": "Protein B",
+          "type": "string"
+        },
+        "provenance": {
+          "items": {
+            "$ref": "#/$defs/EvidenceProvenance"
+          },
+          "title": "Provenance",
+          "type": "array"
+        },
+        "publication_id": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Publication Id"
+        },
+        "quality": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Quality"
+        },
+        "status": {
+          "$ref": "#/$defs/EvidenceStatus",
+          "default": "not_run"
+        },
+        "taxonomic_distance": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Taxonomic Distance"
+        },
+        "warnings": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "protein_a",
+        "protein_b"
+      ],
+      "title": "KnownInteractionEvidence",
+      "type": "object"
+    },
+    "LocalizationEvidence": {
+      "additionalProperties": false,
+      "properties": {
+        "compartment": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Compartment"
+        },
+        "compatibility": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Compatibility"
+        },
+        "origin": {
+          "$ref": "#/$defs/EvidenceOrigin",
+          "default": "inferred"
+        },
+        "protein_id": {
+          "minLength": 1,
+          "title": "Protein Id",
+          "type": "string"
+        },
+        "provenance": {
+          "items": {
+            "$ref": "#/$defs/EvidenceProvenance"
+          },
+          "title": "Provenance",
+          "type": "array"
+        },
+        "quality": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Quality"
+        },
+        "signal_peptide": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Signal Peptide"
+        },
+        "status": {
+          "$ref": "#/$defs/EvidenceStatus",
+          "default": "not_run"
+        },
+        "topology": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Topology"
+        },
+        "transmembrane_helices": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Transmembrane Helices"
+        },
+        "warnings": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "protein_id"
+      ],
+      "title": "LocalizationEvidence",
+      "type": "object"
+    },
+    "OperonEvidence": {
+      "additionalProperties": false,
+      "properties": {
+        "intergenic_distance_bp": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Intergenic Distance Bp"
+        },
+        "origin": {
+          "$ref": "#/$defs/EvidenceOrigin",
+          "default": "inferred"
+        },
+        "provenance": {
+          "items": {
+            "$ref": "#/$defs/EvidenceProvenance"
+          },
+          "title": "Provenance",
+          "type": "array"
+        },
+        "proxy_rule_id": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Proxy Rule Id"
+        },
+        "quality": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Quality"
+        },
+        "same_strand": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Same Strand"
+        },
+        "status": {
+          "$ref": "#/$defs/EvidenceStatus",
+          "default": "not_run"
+        },
+        "support": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Support"
+        },
+        "warnings": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "title": "OperonEvidence",
+      "type": "object"
+    },
+    "OrthologRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "evalue": {
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Evalue"
+        },
+        "identity": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Identity"
+        },
+        "origin": {
+          "$ref": "#/$defs/EvidenceOrigin",
+          "default": "inferred"
+        },
+        "orthogroup": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Orthogroup"
+        },
+        "ortholog_id": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ortholog Id"
+        },
+        "paralog_ambiguity": {
+          "default": false,
+          "title": "Paralog Ambiguity",
+          "type": "boolean"
+        },
+        "protein_id": {
+          "minLength": 1,
+          "title": "Protein Id",
+          "type": "string"
+        },
+        "provenance": {
+          "items": {
+            "$ref": "#/$defs/EvidenceProvenance"
+          },
+          "title": "Provenance",
+          "type": "array"
+        },
+        "quality": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Quality"
+        },
+        "query_coverage": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Query Coverage"
+        },
+        "reference_id": {
+          "minLength": 1,
+          "title": "Reference Id",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/EvidenceStatus",
+          "default": "not_run"
+        },
+        "subject_coverage": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Subject Coverage"
+        },
+        "warnings": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "protein_id",
+        "reference_id"
+      ],
+      "title": "OrthologRecord",
+      "type": "object"
+    },
+    "PhylogeneticProfileEvidence": {
+      "additionalProperties": false,
+      "properties": {
+        "corrected_similarity": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": -1.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Corrected Similarity"
+        },
+        "informative_taxa": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Informative Taxa"
+        },
+        "missing_rate": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Missing Rate"
+        },
+        "origin": {
+          "$ref": "#/$defs/EvidenceOrigin",
+          "default": "inferred"
+        },
+        "provenance": {
+          "items": {
+            "$ref": "#/$defs/EvidenceProvenance"
+          },
+          "title": "Provenance",
+          "type": "array"
+        },
+        "quality": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Quality"
+        },
+        "raw_similarity": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": -1.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Raw Similarity"
+        },
+        "status": {
+          "$ref": "#/$defs/EvidenceStatus",
+          "default": "not_run"
+        },
+        "warnings": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "title": "PhylogeneticProfileEvidence",
+      "type": "object"
+    },
+    "PredictedRelationshipType": {
+      "enum": [
+        "physical_complex",
+        "transient_interaction",
+        "enzyme_substrate",
+        "accessory_factor",
+        "pathway_association",
+        "gene_context_only",
+        "functional_similarity",
+        "insufficient_evidence"
+      ],
+      "title": "PredictedRelationshipType",
+      "type": "string"
+    }
+  },
+  "$id": "https://schemas.protein-interaction-hunter.local/candidate_evidence_bundle/1.0",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "candidate_disposition": {
+      "$ref": "#/$defs/CandidateDisposition"
+    },
+    "candidate_id": {
+      "minLength": 1,
+      "title": "Candidate Id",
+      "type": "string"
+    },
+    "contradictions": {
+      "items": {
+        "$ref": "#/$defs/ContradictionEvidence"
+      },
+      "title": "Contradictions",
+      "type": "array"
+    },
+    "domains": {
+      "items": {
+        "$ref": "#/$defs/DomainEvidence"
+      },
+      "title": "Domains",
+      "type": "array"
+    },
+    "engine_statuses": {
+      "additionalProperties": {
+        "$ref": "#/$defs/EvidenceStatus"
+      },
+      "title": "Engine Statuses",
+      "type": "object"
+    },
+    "evidence_tier": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/EvidenceTier"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "functional": {
+      "items": {
+        "$ref": "#/$defs/FunctionalEvidence"
+      },
+      "title": "Functional",
+      "type": "array"
+    },
+    "fusion": {
+      "items": {
+        "$ref": "#/$defs/FusionEvidence"
+      },
+      "title": "Fusion",
+      "type": "array"
+    },
+    "genome_context": {
+      "items": {
+        "$ref": "#/$defs/GenomeContextEvidence"
+      },
+      "title": "Genome Context",
+      "type": "array"
+    },
+    "known_interactions": {
+      "items": {
+        "$ref": "#/$defs/KnownInteractionEvidence"
+      },
+      "title": "Known Interactions",
+      "type": "array"
+    },
+    "localization": {
+      "items": {
+        "$ref": "#/$defs/LocalizationEvidence"
+      },
+      "title": "Localization",
+      "type": "array"
+    },
+    "operon": {
+      "items": {
+        "$ref": "#/$defs/OperonEvidence"
+      },
+      "title": "Operon",
+      "type": "array"
+    },
+    "orthology": {
+      "items": {
+        "$ref": "#/$defs/OrthologRecord"
+      },
+      "title": "Orthology",
+      "type": "array"
+    },
+    "phylogenetic_profile": {
+      "items": {
+        "$ref": "#/$defs/PhylogeneticProfileEvidence"
+      },
+      "title": "Phylogenetic Profile",
+      "type": "array"
+    },
+    "predicted_relationship_type": {
+      "$ref": "#/$defs/PredictedRelationshipType"
+    },
+    "provenance": {
+      "items": {
+        "$ref": "#/$defs/EvidenceProvenance"
+      },
+      "title": "Provenance",
+      "type": "array"
+    },
+    "query_id": {
+      "minLength": 1,
+      "title": "Query Id",
+      "type": "string"
+    },
+    "run_id": {
+      "minLength": 1,
+      "title": "Run Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "score": {
+      "$ref": "#/$defs/CandidateScore"
+    },
+    "warnings": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Warnings",
+      "type": "array"
+    }
+  },
+  "required": [
+    "run_id",
+    "query_id",
+    "candidate_id",
+    "candidate_disposition",
+    "predicted_relationship_type"
+  ],
+  "title": "CandidateEvidenceBundle",
+  "type": "object"
+}

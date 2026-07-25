@@ -1,0 +1,235 @@
+{
+  "$defs": {
+    "InputFileManifest": {
+      "additionalProperties": false,
+      "properties": {
+        "exists": {
+          "title": "Exists",
+          "type": "boolean"
+        },
+        "logical_name": {
+          "minLength": 1,
+          "title": "Logical Name",
+          "type": "string"
+        },
+        "modified_time": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Modified Time"
+        },
+        "path": {
+          "format": "path",
+          "title": "Path",
+          "type": "string"
+        },
+        "required": {
+          "title": "Required",
+          "type": "boolean"
+        },
+        "sha256": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sha256"
+        },
+        "size_bytes": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Size Bytes"
+        }
+      },
+      "required": [
+        "logical_name",
+        "path",
+        "exists",
+        "required"
+      ],
+      "title": "InputFileManifest",
+      "type": "object"
+    },
+    "RunStatus": {
+      "enum": [
+        "initialized",
+        "validated",
+        "completed",
+        "partial",
+        "failed"
+      ],
+      "title": "RunStatus",
+      "type": "string"
+    }
+  },
+  "$id": "https://schemas.protein-interaction-hunter.local/run_manifest/1.0",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "command_line": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Command Line",
+      "type": "array"
+    },
+    "completed_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Completed At"
+    },
+    "config_path": {
+      "format": "path",
+      "title": "Config Path",
+      "type": "string"
+    },
+    "config_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Config Sha256",
+      "type": "string"
+    },
+    "config_snapshot_path": {
+      "anyOf": [
+        {
+          "format": "path",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Config Snapshot Path"
+    },
+    "dependency_versions": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Dependency Versions",
+      "type": "object"
+    },
+    "git_commit": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Git Commit"
+    },
+    "incomplete_evidence_flags": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Incomplete Evidence Flags",
+      "type": "array"
+    },
+    "input_files": {
+      "items": {
+        "$ref": "#/$defs/InputFileManifest"
+      },
+      "title": "Input Files",
+      "type": "array"
+    },
+    "package_version": {
+      "minLength": 1,
+      "title": "Package Version",
+      "type": "string"
+    },
+    "platform": {
+      "minLength": 1,
+      "title": "Platform",
+      "type": "string"
+    },
+    "python_version": {
+      "minLength": 1,
+      "title": "Python Version",
+      "type": "string"
+    },
+    "random_seed": {
+      "title": "Random Seed",
+      "type": "integer"
+    },
+    "run_id": {
+      "minLength": 1,
+      "title": "Run Id",
+      "type": "string"
+    },
+    "run_name": {
+      "minLength": 1,
+      "title": "Run Name",
+      "type": "string"
+    },
+    "schema_version": {
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "started_at": {
+      "format": "date-time",
+      "title": "Started At",
+      "type": "string"
+    },
+    "status": {
+      "$ref": "#/$defs/RunStatus"
+    },
+    "warnings": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Warnings",
+      "type": "array"
+    },
+    "working_directory": {
+      "format": "path",
+      "title": "Working Directory",
+      "type": "string"
+    }
+  },
+  "required": [
+    "run_id",
+    "run_name",
+    "started_at",
+    "status",
+    "working_directory",
+    "config_path",
+    "config_sha256",
+    "python_version",
+    "platform",
+    "package_version",
+    "random_seed"
+  ],
+  "title": "RunManifest",
+  "type": "object"
+}
