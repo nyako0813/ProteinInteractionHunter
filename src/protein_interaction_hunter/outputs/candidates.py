@@ -7,7 +7,10 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
-from protein_interaction_hunter.models.evidence import GenomeContextEvidence
+from protein_interaction_hunter.models.evidence import (
+    GenomeContextEvidence,
+    OperonEvidence,
+)
 from protein_interaction_hunter.models.protein import CandidateProtein
 
 CANDIDATE_COLUMNS = (
@@ -59,6 +62,22 @@ CANDIDATE_COLUMNS = (
     "candidate_distance_to_contig_right_edge",
     "gene_context_rule_version",
     "gene_context_warnings",
+    "operon_status",
+    "operon_proxy_status",
+    "operon_same_contig",
+    "operon_same_strand",
+    "operon_is_adjacent",
+    "operon_intergenic_distance_bp",
+    "operon_overlap_bp",
+    "operon_intervening_gene_count",
+    "operon_transcriptional_order",
+    "operon_maximum_intergenic_distance_bp",
+    "operon_passes_distance_threshold",
+    "operon_supporting_conditions",
+    "operon_conflicting_conditions",
+    "operon_rule_version",
+    "operon_rule_id",
+    "operon_warnings",
 )
 
 
@@ -79,6 +98,7 @@ class CandidateTableTsvWriter:
         candidates: Sequence[CandidateProtein],
         path: Path,
         contexts: Mapping[tuple[str, str], GenomeContextEvidence] | None = None,
+        operons: Mapping[tuple[str, str], OperonEvidence] | None = None,
     ) -> Path:
         output_path = path.expanduser().resolve()
         output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -88,8 +108,11 @@ class CandidateTableTsvWriter:
         )
         writer.writeheader()
         context_map = contexts or {}
+        operon_map = operons or {}
         for candidate in sorted(candidates, key=lambda item: (item.query_id, item.protein_id)):
-            context = context_map.get((candidate.query_id, candidate.protein_id))
+            pair = (candidate.query_id, candidate.protein_id)
+            context = context_map.get(pair)
+            operon = operon_map.get(pair)
             writer.writerow(
                 {
                     "run_id": run_id,
@@ -162,6 +185,50 @@ class CandidateTableTsvWriter:
                         context.calculation_rule_version if context else None
                     ),
                     "gene_context_warnings": _list(context.warnings) if context else "",
+                    "operon_status": _value(operon.status if operon else None),
+                    "operon_proxy_status": _value(
+                        operon.proxy_status if operon else None
+                    ),
+                    "operon_same_contig": _value(
+                        operon.same_contig if operon else None
+                    ),
+                    "operon_same_strand": _value(
+                        operon.same_strand if operon else None
+                    ),
+                    "operon_is_adjacent": _value(
+                        operon.is_adjacent if operon else None
+                    ),
+                    "operon_intergenic_distance_bp": _value(
+                        operon.intergenic_distance_bp if operon else None
+                    ),
+                    "operon_overlap_bp": _value(
+                        operon.overlap_bp if operon else None
+                    ),
+                    "operon_intervening_gene_count": _value(
+                        operon.intervening_gene_count if operon else None
+                    ),
+                    "operon_transcriptional_order": _value(
+                        operon.transcriptional_order if operon else None
+                    ),
+                    "operon_maximum_intergenic_distance_bp": _value(
+                        operon.maximum_intergenic_distance_bp if operon else None
+                    ),
+                    "operon_passes_distance_threshold": _value(
+                        operon.passes_distance_threshold if operon else None
+                    ),
+                    "operon_supporting_conditions": (
+                        _list(operon.supporting_conditions) if operon else ""
+                    ),
+                    "operon_conflicting_conditions": (
+                        _list(operon.conflicting_conditions) if operon else ""
+                    ),
+                    "operon_rule_version": _value(
+                        operon.calculation_rule_version if operon else None
+                    ),
+                    "operon_rule_id": _value(
+                        operon.proxy_rule_id if operon else None
+                    ),
+                    "operon_warnings": _list(operon.warnings) if operon else "",
                 }
             )
         output_path.write_text(buffer.getvalue(), encoding="utf-8", newline="\n")

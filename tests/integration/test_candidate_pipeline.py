@@ -36,10 +36,14 @@ def test_pipeline_gene_context_scores_and_jsonl_round_trip(
     for bundle in result.bundles:
         assert len(bundle.genome_context) == 1
         assert bundle.engine_statuses["gene_context"] is bundle.genome_context[0].status
+
+        assert len(bundle.operon) == 1
+        assert bundle.engine_statuses["operon"] is bundle.operon[0].status
+
         assert all(
             status is EvidenceStatus.NOT_RUN
             for engine, status in bundle.engine_statuses.items()
-            if engine != "gene_context"
+            if engine not in {"gene_context", "operon"}
         )
         scores = bundle.score.model_dump()
         assert all(value is None for key, value in scores.items() if key.endswith("_score"))

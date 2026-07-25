@@ -1650,6 +1650,26 @@
     "OperonEvidence": {
       "additionalProperties": false,
       "properties": {
+        "calculation_rule_version": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Calculation Rule Version"
+        },
+        "conflicting_conditions": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Conflicting Conditions",
+          "type": "array"
+        },
         "intergenic_distance_bp": {
           "anyOf": [
             {
@@ -1662,9 +1682,72 @@
           "default": null,
           "title": "Intergenic Distance Bp"
         },
+        "intervening_gene_count": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Intervening Gene Count"
+        },
+        "is_adjacent": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Is Adjacent"
+        },
+        "maximum_intergenic_distance_bp": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Maximum Intergenic Distance Bp"
+        },
         "origin": {
           "$ref": "#/$defs/EvidenceOrigin",
           "default": "inferred"
+        },
+        "overlap_bp": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Overlap Bp"
+        },
+        "passes_distance_threshold": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Passes Distance Threshold"
         },
         "provenance": {
           "items": {
@@ -1686,6 +1769,17 @@
           "default": null,
           "title": "Proxy Rule Id"
         },
+        "proxy_status": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/OperonProxyStatus"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "quality": {
           "anyOf": [
             {
@@ -1699,6 +1793,18 @@
           ],
           "default": null,
           "title": "Quality"
+        },
+        "same_contig": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Same Contig"
         },
         "same_strand": {
           "anyOf": [
@@ -1730,6 +1836,24 @@
           "default": null,
           "title": "Support"
         },
+        "supporting_conditions": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Supporting Conditions",
+          "type": "array"
+        },
+        "transcriptional_order": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TranscriptionalOrder"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "warnings": {
           "items": {
             "type": "string"
@@ -1740,6 +1864,17 @@
       },
       "title": "OperonEvidence",
       "type": "object"
+    },
+    "OperonProxyStatus": {
+      "enum": [
+        "supported",
+        "partial_support",
+        "not_supported",
+        "not_applicable",
+        "unknown"
+      ],
+      "title": "OperonProxyStatus",
+      "type": "string"
     },
     "OrthologRecord": {
       "additionalProperties": false,
@@ -2018,6 +2153,18 @@
         "different_contig"
       ],
       "title": "StrandRelationship",
+      "type": "string"
+    },
+    "TranscriptionalOrder": {
+      "enum": [
+        "query_then_candidate",
+        "candidate_then_query",
+        "overlapping",
+        "same_feature",
+        "different_contig",
+        "unknown"
+      ],
+      "title": "TranscriptionalOrder",
       "type": "string"
     }
   },

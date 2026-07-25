@@ -89,6 +89,23 @@ class ContextCompleteness(StrEnum):
     UNKNOWN = "unknown"
 
 
+class OperonProxyStatus(StrEnum):
+    SUPPORTED = "supported"
+    PARTIAL_SUPPORT = "partial_support"
+    NOT_SUPPORTED = "not_supported"
+    NOT_APPLICABLE = "not_applicable"
+    UNKNOWN = "unknown"
+
+
+class TranscriptionalOrder(StrEnum):
+    QUERY_THEN_CANDIDATE = "query_then_candidate"
+    CANDIDATE_THEN_QUERY = "candidate_then_query"
+    OVERLAPPING = "overlapping"
+    SAME_FEATURE = "same_feature"
+    DIFFERENT_CONTIG = "different_contig"
+    UNKNOWN = "unknown"
+
+
 class ContradictionSeverity(StrEnum):
     INFO = "info"
     LOW = "low"

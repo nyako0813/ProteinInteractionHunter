@@ -20,6 +20,10 @@ from protein_interaction_hunter.application.gene_context import (
     calculate_gene_context,
 )
 from protein_interaction_hunter.application.identifiers import NORMALIZATION_RULE_VERSION
+from protein_interaction_hunter.application.operon_proxy import (
+    OPERON_PROXY_RULE_VERSION,
+    calculate_operon_proxy,
+)
 from protein_interaction_hunter.config import AppConfig, load_config
 from protein_interaction_hunter.exceptions import InputValidationError
 from protein_interaction_hunter.manifest import build_input_file_manifest, build_run_manifest
@@ -36,6 +40,7 @@ from protein_interaction_hunter.models.evidence import (
     CandidateEvidenceBundle,
     EvidenceProvenance,
     GenomeContextEvidence,
+    OperonEvidence,
 )
 from protein_interaction_hunter.outputs.candidates import (
     CandidateTableTsvWriter,
@@ -48,7 +53,6 @@ from protein_interaction_hunter.outputs.jsonl import (
 )
 
 _UNIMPLEMENTED_ENGINES = (
-    "operon",
     "orthology",
     "phylogenetic_profile",
     "domains",
@@ -120,6 +124,9 @@ def _policy_settings(config: AppConfig) -> dict[str, str | int | bool]:
         "gene_context_enabled": config.gene_context.enabled,
         "neighborhood_gene_count": config.gene_context.neighborhood_gene_count,
         "require_query_coordinates": config.gene_context.require_query_coordinates,
+        "operon_proxy_max_intergenic_bp": (
+            config.gene_context.operon_proxy_max_intergenic_bp
+        ),
     }
 
 
@@ -174,6 +181,48 @@ def _excel_context_rows(
         )
     return rows
 
+def _excel_operon_rows(
+    run_id: str,
+    operons: dict[tuple[str, str], OperonEvidence],
+) -> list[dict[str, object]]:
+    rows: list[dict[str, object]] = []
+
+    for (query_id, candidate_id), operon in sorted(operons.items()):
+        rows.append(
+            {
+                "Run_ID": run_id,
+                "Query_ID": query_id,
+                "Candidate_ID": candidate_id,
+                "Status": operon.status,
+                "Proxy_Status": operon.proxy_status,
+                "Same_Contig": operon.same_contig,
+                "Same_Strand": operon.same_strand,
+                "Is_Adjacent": operon.is_adjacent,
+                "Intergenic_Distance_BP": operon.intergenic_distance_bp,
+                "Overlap_BP": operon.overlap_bp,
+                "Intervening_Gene_Count": operon.intervening_gene_count,
+                "Transcriptional_Order": operon.transcriptional_order,
+                "Maximum_Intergenic_Distance_BP": (
+                    operon.maximum_intergenic_distance_bp
+                ),
+                "Passes_Distance_Threshold": operon.passes_distance_threshold,
+                "Supporting_Conditions": "|".join(
+                    operon.supporting_conditions
+                ),
+                "Conflicting_Conditions": "|".join(
+                    operon.conflicting_conditions
+                ),
+                "Rule_Version": operon.calculation_rule_version,
+                "Rule_ID": operon.proxy_rule_id,
+                "Warnings": "|".join(operon.warnings),
+                "Provenance": "|".join(
+                    f"{item.source_name}:{item.source_version or ''}:{item.method or ''}"
+                    for item in operon.provenance
+                ),
+            }
+        )
+
+    return rows
 
 class InteractionCandidatePipeline:
     """Generate auditable candidates and coordinate-derived context without scoring."""
@@ -221,6 +270,14 @@ class InteractionCandidatePipeline:
                     coordinate_index,
                     config.gene_context.neighborhood_gene_count,
                 )
+        operons: dict[tuple[str, str], OperonEvidence] = {}
+        if config.gene_context.enabled:
+            for pair, pair_context in contexts.items():
+                operons[pair] = calculate_operon_proxy(
+                    pair_context,
+                    config.gene_context.operon_proxy_max_intergenic_bp,
+                )
+
         config_hash = build_input_file_manifest(
             "config", resolved_config_path, required=True
         ).sha256
@@ -238,10 +295,14 @@ class InteractionCandidatePipeline:
         )
         bundles: list[CandidateEvidenceBundle] = []
         for candidate in generated.candidates:
-            context = contexts.get((candidate.query_id, candidate.protein_id))
+            pair = (candidate.query_id, candidate.protein_id)
+            context = contexts.get(pair)
+            operon = operons.get(pair)
             statuses = {engine: EvidenceStatus.NOT_RUN for engine in _UNIMPLEMENTED_ENGINES}
             statuses["gene_context"] = context.status if context else EvidenceStatus.NOT_RUN
+            statuses["operon"] = operon.status if operon else EvidenceStatus.NOT_RUN
             context_warnings = context.warnings if context else []
+            operon_warnings = operon.warnings if operon else []
             bundles.append(
                 CandidateEvidenceBundle(
                     run_id=run_id,
@@ -251,10 +312,13 @@ class InteractionCandidatePipeline:
                     candidate_disposition=candidate.disposition,
                     predicted_relationship_type=PredictedRelationshipType.INSUFFICIENT_EVIDENCE,
                     genome_context=[context] if context else [],
+                    operon=[operon] if operon else [],
                     engine_statuses=statuses,
                     provenance=[provenance],
                     policy_settings=policies,
-                    warnings=sorted(set(candidate.warnings + context_warnings)),
+                    warnings=sorted(
+                        set(candidate.warnings + context_warnings + operon_warnings)
+                    ),
                 )
             )
         evidence_path = JsonlEvidenceBundleWriter().write(
@@ -265,6 +329,7 @@ class InteractionCandidatePipeline:
             generated.candidates,
             output_path / "candidate_table.tsv",
             contexts=contexts,
+            operons=operons,
         )
         all_warnings = [warning for bundle in bundles for warning in bundle.warnings]
         warning_summary_path = WarningSummaryTsvWriter().write(
@@ -274,7 +339,10 @@ class InteractionCandidatePipeline:
         if config.output.write_excel:
             excel_path = ExcelSchemaWriter().write(
                 output_path / "ProteinInteractionHunter.xlsx",
-                rows_by_sheet={"Gene_Context": _excel_context_rows(run_id, contexts)},
+                rows_by_sheet={
+                    "Gene_Context": _excel_context_rows(run_id, contexts),
+                    "Operon_Proxy": _excel_operon_rows(run_id, operons),
+                },
             )
         input_files = [
             build_input_file_manifest("proteome_fasta", config.input.proteome_fasta, required=True),
@@ -302,7 +370,11 @@ class InteractionCandidatePipeline:
         manifest.gene_context_rule_version = (
             GENE_CONTEXT_RULE_VERSION if config.gene_context.enabled else None
         )
-        manifest.policy_settings = policies
+        if config.gene_context.enabled:
+            manifest.policy_settings["operon_proxy_rule_version"] = (
+                OPERON_PROXY_RULE_VERSION
+            )
+        manifest.policy_settings = policies | manifest.policy_settings
         manifest.warnings = sorted(set(all_warnings))
         manifest.parser_warnings = sorted(
             set(document.warnings)
@@ -314,7 +386,9 @@ class InteractionCandidatePipeline:
             f"{engine}_not_run" for engine in _UNIMPLEMENTED_ENGINES
         ]
         if not config.gene_context.enabled:
-            manifest.incomplete_evidence_flags.append("gene_context_not_run")
+            manifest.incomplete_evidence_flags.extend(
+                ["gene_context_not_run", "operon_not_run"]
+            )
         manifest_path = JsonRunManifestWriter().write(manifest, output_path / "run_manifest.json")
         disposition_counts = {
             disposition: sum(

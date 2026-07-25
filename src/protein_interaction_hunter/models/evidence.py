@@ -13,9 +13,11 @@ from protein_interaction_hunter.models.enums import (
     EvidenceOrigin,
     EvidenceStatus,
     EvidenceTier,
+    OperonProxyStatus,
     PredictedRelationshipType,
     RelativePosition,
     StrandRelationship,
+    TranscriptionalOrder,
 )
 from protein_interaction_hunter.models.protein import CandidateProtein
 from protein_interaction_hunter.models.scoring import CandidateScore
@@ -79,9 +81,20 @@ class GenomeContextEvidence(BaseEvidence):
 
 
 class OperonEvidence(BaseEvidence):
+    calculation_rule_version: NonEmptyStr | None = None
+    same_contig: bool | None = None
     same_strand: bool | None = None
+    is_adjacent: bool | None = None
     intergenic_distance_bp: int | None = None
+    overlap_bp: int | None = Field(default=None, ge=0)
+    intervening_gene_count: int | None = Field(default=None, ge=0)
+    transcriptional_order: TranscriptionalOrder | None = None
+    maximum_intergenic_distance_bp: int | None = Field(default=None, ge=0)
+    passes_distance_threshold: bool | None = None
+    proxy_status: OperonProxyStatus | None = None
     proxy_rule_id: NonEmptyStr | None = None
+    supporting_conditions: list[str] = Field(default_factory=list)
+    conflicting_conditions: list[str] = Field(default_factory=list)
     support: float | None = Field(default=None, ge=0.0, le=1.0)
 
 
