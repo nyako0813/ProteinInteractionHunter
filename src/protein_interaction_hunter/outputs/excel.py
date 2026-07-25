@@ -37,6 +37,7 @@ EXCEL_SHEETS: dict[str, tuple[str, ...]] = {
         "Source",
     ),
     "Gene_Context": (
+        "Run_ID",
         "Query_ID",
         "Candidate_ID",
         "Same_Contig",
@@ -61,6 +62,7 @@ EXCEL_SHEETS: dict[str, tuple[str, ...]] = {
         "Status",
         "Warnings",
         "Source",
+        "Provenance",
     ),
     "Contradictions": (
         "Query_ID",

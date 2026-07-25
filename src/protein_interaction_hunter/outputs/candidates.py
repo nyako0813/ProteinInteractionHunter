@@ -51,6 +51,14 @@ CANDIDATE_COLUMNS = (
     "within_neighborhood_window",
     "context_completeness",
     "gene_context_status",
+    "edge_to_edge_distance_bp",
+    "within_neighborhood_gene_count",
+    "query_distance_to_contig_left_edge",
+    "query_distance_to_contig_right_edge",
+    "candidate_distance_to_contig_left_edge",
+    "candidate_distance_to_contig_right_edge",
+    "gene_context_rule_version",
+    "gene_context_warnings",
 )
 
 
@@ -132,6 +140,28 @@ class CandidateTableTsvWriter:
                         context.context_completeness if context else None
                     ),
                     "gene_context_status": _value(context.status if context else None),
+                    "edge_to_edge_distance_bp": _value(
+                        context.edge_to_edge_distance_bp if context else None
+                    ),
+                    "within_neighborhood_gene_count": _value(
+                        context.within_neighborhood_gene_count if context else None
+                    ),
+                    "query_distance_to_contig_left_edge": _value(
+                        context.query_distance_to_contig_left_edge if context else None
+                    ),
+                    "query_distance_to_contig_right_edge": _value(
+                        context.query_distance_to_contig_right_edge if context else None
+                    ),
+                    "candidate_distance_to_contig_left_edge": _value(
+                        context.candidate_distance_to_contig_left_edge if context else None
+                    ),
+                    "candidate_distance_to_contig_right_edge": _value(
+                        context.candidate_distance_to_contig_right_edge if context else None
+                    ),
+                    "gene_context_rule_version": _value(
+                        context.calculation_rule_version if context else None
+                    ),
+                    "gene_context_warnings": _list(context.warnings) if context else "",
                 }
             )
         output_path.write_text(buffer.getvalue(), encoding="utf-8", newline="\n")

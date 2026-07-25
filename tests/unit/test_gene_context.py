@@ -74,6 +74,7 @@ def test_one_based_closed_interval_distance_and_adjacency() -> None:
     index = index_for([coordinate("Q", 100, 200), coordinate("C", 201, 250)], ["Q", "C"])
     evidence = calculate_gene_context("Q", "C", index, 1)
     assert evidence.distance_bp == 0
+    assert evidence.edge_to_edge_distance_bp == 0
     assert evidence.overlap_bp == 0
     assert evidence.coordinate_position is CoordinatePosition.RIGHT_OF_QUERY
 
@@ -81,6 +82,7 @@ def test_one_based_closed_interval_distance_and_adjacency() -> None:
 def test_overlap_is_inclusive_and_separate_from_distance(fixture_dir: Path) -> None:
     evidence = fixture_context(fixture_dir, "OVERLAP_001")
     assert evidence.distance_bp == 0
+    assert evidence.edge_to_edge_distance_bp == 0
     assert evidence.overlap_bp == 21
     assert evidence.relative_position is RelativePosition.OVERLAPPING
     assert evidence.coordinate_position is CoordinatePosition.OVERLAPPING
@@ -99,6 +101,7 @@ def test_different_contig_is_not_applicable_not_negative(fixture_dir: Path) -> N
     assert evidence.status is EvidenceStatus.NOT_APPLICABLE
     assert evidence.same_contig is False
     assert evidence.distance_bp is None
+    assert evidence.edge_to_edge_distance_bp is None
     assert evidence.overlap_bp is None
     assert evidence.strand_relationship is StrandRelationship.DIFFERENT_CONTIG
 
@@ -112,6 +115,7 @@ def test_missing_coordinate_remains_missing(fixture_dir: Path) -> None:
     assert evidence.candidate_start is None
     assert evidence.distance_bp is None
     assert "missing_coordinate:FRAG_001" in evidence.warnings
+    assert evidence.edge_to_edge_distance_bp is None
 
 
 @pytest.mark.parametrize(
@@ -120,6 +124,7 @@ def test_missing_coordinate_remains_missing(fixture_dir: Path) -> None:
         ("+", "+", StrandRelationship.SAME_DIRECTION),
         ("+", "-", StrandRelationship.CONVERGENT),
         ("-", "+", StrandRelationship.DIVERGENT),
+        ("-", "-", StrandRelationship.SAME_DIRECTION),
         ("?", "+", StrandRelationship.UNKNOWN),
     ],
 )
@@ -216,6 +221,9 @@ def test_contig_edge_distances_and_window_completeness(fixture_dir: Path) -> Non
     assert near.context_completeness is ContextCompleteness.LEFT_TRUNCATED
     assert near.within_neighborhood_window is True
 
+    assert near.query_distance_to_contig_left_edge == 49
+    assert near.within_neighborhood_gene_count is True
+
 
 def test_rule_version_is_exposed_in_evidence(fixture_dir: Path) -> None:
     evidence = fixture_context(fixture_dir, "NEAR_001")
@@ -241,3 +249,50 @@ def test_non_gene_feature_is_counted_only_in_all_feature_count() -> None:
     evidence = calculate_gene_context("Q", "C", index, 3)
     assert evidence.intervening_feature_count == 1
     assert evidence.intervening_gene_count == 0
+
+
+def test_same_contig_left_side_and_separated_distance() -> None:
+    index = index_for(
+        [coordinate("Q", 300, 400), coordinate("C", 100, 200)],
+        ["Q", "C"],
+    )
+    evidence = calculate_gene_context("Q", "C", index, 1)
+    assert evidence.coordinate_position is CoordinatePosition.LEFT_OF_QUERY
+    assert evidence.relative_position is RelativePosition.UPSTREAM
+    assert evidence.edge_to_edge_distance_bp == 99
+
+
+def test_neighborhood_window_includes_exact_index_boundary() -> None:
+    records = [
+        coordinate("Q", 100, 150),
+        coordinate("X", 200, 250),
+        coordinate("C", 300, 350),
+    ]
+    index = index_for(records, ["Q", "X", "C"])
+    assert calculate_gene_context("Q", "C", index, 2).within_neighborhood_gene_count is True
+    assert calculate_gene_context("Q", "C", index, 1).within_neighborhood_gene_count is False
+
+
+def test_right_truncated_context_is_distinct() -> None:
+    records = [
+        coordinate("A", 100, 150),
+        coordinate("Q", 300, 350),
+        coordinate("C", 500, 550),
+    ]
+    index = index_for(records, ["A", "Q", "C"])
+    evidence = calculate_gene_context("Q", "C", index, 1)
+    assert evidence.context_completeness is ContextCompleteness.RIGHT_TRUNCATED
+
+
+def test_representative_feature_order_is_deterministic() -> None:
+    records = [
+        coordinate("Q", 100, 150),
+        coordinate("B", 200, 250),
+        coordinate("A", 200, 250),
+        coordinate("C", 300, 350),
+    ]
+    first = index_for(records, ["Q", "B", "A", "C"])
+    second = index_for(list(reversed(records)), ["C", "A", "B", "Q"])
+    first_ids = [item.representative_id for item in first.features_by_contig["c"]]
+    second_ids = [item.representative_id for item in second.features_by_contig["c"]]
+    assert first_ids == second_ids == ["protein:Q", "protein:A", "protein:B", "protein:C"]

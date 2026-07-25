@@ -971,6 +971,32 @@
           "default": null,
           "title": "Candidate Contig"
         },
+        "candidate_distance_to_contig_left_edge": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Candidate Distance To Contig Left Edge"
+        },
+        "candidate_distance_to_contig_right_edge": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Candidate Distance To Contig Right Edge"
+        },
         "candidate_end": {
           "anyOf": [
             {
@@ -1084,6 +1110,19 @@
           "default": null,
           "title": "Distance Bp"
         },
+        "edge_to_edge_distance_bp": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Edge To Edge Distance Bp"
+        },
         "feature_index_delta": {
           "anyOf": [
             {
@@ -1173,6 +1212,32 @@
           ],
           "default": null,
           "title": "Query Contig"
+        },
+        "query_distance_to_contig_left_edge": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Query Distance To Contig Left Edge"
+        },
+        "query_distance_to_contig_right_edge": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Query Distance To Contig Right Edge"
         },
         "query_end": {
           "anyOf": [
@@ -1320,6 +1385,18 @@
           },
           "title": "Warnings",
           "type": "array"
+        },
+        "within_neighborhood_gene_count": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Within Neighborhood Gene Count"
         },
         "within_neighborhood_window": {
           "anyOf": [

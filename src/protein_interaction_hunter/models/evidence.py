@@ -54,6 +54,7 @@ class GenomeContextEvidence(BaseEvidence):
     candidate_strand: str | None = Field(default=None, pattern=r"^[+\-?]$")
     strand_relationship: StrandRelationship | None = None
     distance_bp: int | None = Field(default=None, ge=0)
+    edge_to_edge_distance_bp: int | None = Field(default=None, ge=0)
     overlap_bp: int | None = Field(default=None, ge=0)
     relative_position: RelativePosition | None = None
     coordinate_position: CoordinatePosition | None = None
@@ -63,10 +64,15 @@ class GenomeContextEvidence(BaseEvidence):
     candidate_feature_index: int | None = Field(default=None, ge=0)
     feature_index_delta: int | None = Field(default=None, ge=0)
     within_neighborhood_window: bool | None = None
+    within_neighborhood_gene_count: bool | None = None
     query_left_edge_distance_bp: int | None = Field(default=None, ge=0)
     query_right_edge_distance_bp: int | None = Field(default=None, ge=0)
     candidate_left_edge_distance_bp: int | None = Field(default=None, ge=0)
     candidate_right_edge_distance_bp: int | None = Field(default=None, ge=0)
+    query_distance_to_contig_left_edge: int | None = Field(default=None, ge=0)
+    query_distance_to_contig_right_edge: int | None = Field(default=None, ge=0)
+    candidate_distance_to_contig_left_edge: int | None = Field(default=None, ge=0)
+    candidate_distance_to_contig_right_edge: int | None = Field(default=None, ge=0)
     context_completeness: ContextCompleteness | None = None
     strand_relation: str | None = None
     boundary_flags: list[str] = Field(default_factory=list)

@@ -134,12 +134,14 @@ def _write_snapshot(config: AppConfig, path: Path) -> Path:
 
 
 def _excel_context_rows(
+    run_id: str,
     contexts: dict[tuple[str, str], GenomeContextEvidence],
 ) -> list[dict[str, object]]:
     rows: list[dict[str, object]] = []
     for (query_id, candidate_id), context in sorted(contexts.items()):
         rows.append(
             {
+                "Run_ID": run_id,
                 "Query_ID": query_id,
                 "Candidate_ID": candidate_id,
                 "Same_Contig": context.same_contig,
@@ -164,6 +166,10 @@ def _excel_context_rows(
                 "Status": context.status,
                 "Warnings": "|".join(context.warnings),
                 "Source": GENE_CONTEXT_RULE_VERSION,
+                "Provenance": "|".join(
+                    f"{item.source_name}:{item.source_version or ''}:{item.method or ''}"
+                    for item in context.provenance
+                ),
             }
         )
     return rows
@@ -268,7 +274,7 @@ class InteractionCandidatePipeline:
         if config.output.write_excel:
             excel_path = ExcelSchemaWriter().write(
                 output_path / "ProteinInteractionHunter.xlsx",
-                rows_by_sheet={"Gene_Context": _excel_context_rows(contexts)},
+                rows_by_sheet={"Gene_Context": _excel_context_rows(run_id, contexts)},
             )
         input_files = [
             build_input_file_manifest("proteome_fasta", config.input.proteome_fasta, required=True),
