@@ -11,12 +11,23 @@ import yaml
 from pydantic import Field
 
 from protein_interaction_hunter.adapters.local.annotation import LocalAnnotationTsvLoader
+from protein_interaction_hunter.adapters.local.domain_rules import (
+    LocalDomainRulesLoader,
+)
+from protein_interaction_hunter.adapters.local.domains import (
+    LocalDomainTsvLoader,
+)
 from protein_interaction_hunter.adapters.local.fasta import LocalFastaLoader
 from protein_interaction_hunter.adapters.local.functional_rules import (
     LocalFunctionalRulesLoader,
 )
 from protein_interaction_hunter.adapters.local.gff import LocalGff3Loader
 from protein_interaction_hunter.application.candidates import generate_candidates
+from protein_interaction_hunter.application.domain_pairs import (
+    DOMAIN_PAIR_ENGINE_VERSION,
+    build_domain_index,
+    evaluate_domain_pairs,
+)
 from protein_interaction_hunter.application.functional_complementarity import (
     FUNCTIONAL_COMPLEMENTARITY_ENGINE_VERSION,
     evaluate_functional_complementarity,
@@ -45,6 +56,7 @@ from protein_interaction_hunter.models.enums import (
 )
 from protein_interaction_hunter.models.evidence import (
     CandidateEvidenceBundle,
+    DomainEvidence,
     EvidenceProvenance,
     FunctionalEvidence,
     GenomeContextEvidence,
@@ -63,7 +75,6 @@ from protein_interaction_hunter.outputs.jsonl import (
 _UNIMPLEMENTED_ENGINES = (
     "orthology",
     "phylogenetic_profile",
-    "domains",
     "localization",
     "fusion",
     "known_interactions",
@@ -251,6 +262,62 @@ def _excel_operon_rows(
 
     return rows
 
+def _excel_domain_rows(
+    run_id: str,
+    domain_evidence: dict[
+        tuple[str, str],
+        list[DomainEvidence],
+    ],
+) -> list[dict[str, object]]:
+    rows: list[dict[str, object]] = []
+
+    for (query_id, candidate_id), evidence_records in sorted(
+        domain_evidence.items()
+    ):
+        for evidence in evidence_records:
+            rows.append(
+                {
+                    "Run_ID": run_id,
+                    "Query_ID": query_id,
+                    "Candidate_ID": candidate_id,
+                    "Status": evidence.status,
+                    "Pair_Matched": evidence.pair_matched,
+                    "Candidate_Protein_ID": evidence.protein_id,
+                    "Candidate_Source": evidence.source,
+                    "Candidate_Accession": evidence.accession,
+                    "Candidate_Domain_Name": evidence.name,
+                    "Candidate_Start": evidence.start,
+                    "Candidate_End": evidence.end,
+                    "Architecture_Index": evidence.architecture_index,
+                    "Candidate_Role": evidence.role,
+                    "Pair_Rule_ID": evidence.pair_rule_id,
+                    "Query_Protein_ID": evidence.paired_protein_id,
+                    "Query_Accession": evidence.paired_accession,
+                    "Is_Shared": evidence.is_shared,
+                    "Support_Terms": "|".join(
+                        evidence.support_terms
+                    ),
+                    "Conflicting_Terms": "|".join(
+                        evidence.conflicting_terms
+                    ),
+                    "Rule_Version": (
+                        evidence.calculation_rule_version
+                    ),
+                    "Ruleset_Path": evidence.ruleset_path,
+                    "Warnings": "|".join(evidence.warnings),
+                    "Provenance": "|".join(
+                        (
+                            f"{item.source_name}:"
+                            f"{item.source_version or ''}:"
+                            f"{item.method or ''}"
+                        )
+                        for item in evidence.provenance
+                    ),
+                }
+            )
+
+    return rows
+
 def _excel_functional_rows(
     run_id: str,
     functional_evidence: dict[
@@ -365,6 +432,58 @@ class InteractionCandidatePipeline:
                     config.gene_context.operon_proxy_max_intergenic_bp,
                 )
 
+        domain_evidence: dict[
+            tuple[str, str],
+            list[DomainEvidence],
+        ] = {}
+
+        if config.domains.enabled:
+            if config.domains.source != "local_table":
+                raise InputValidationError(
+                    "domains.source must be 'local_table' "
+                    "when domains.enabled is true"
+                )
+
+            domain_table_path = config.domains.local_table
+            domain_rules_path = config.domains.rules_path
+
+            if domain_table_path is None:
+                raise InputValidationError(
+                    "domains.local_table is required "
+                    "when domains.enabled is true"
+                )
+
+            if domain_rules_path is None:
+                raise InputValidationError(
+                    "domains.rules_path is required "
+                    "when domains.enabled is true"
+                )
+
+            domain_records = LocalDomainTsvLoader().load(
+                domain_table_path
+            )
+            domain_rules = LocalDomainRulesLoader().load(
+                domain_rules_path
+            )
+            domain_index = build_domain_index(domain_records)
+
+            for candidate in generated.candidates:
+                pair = (
+                    candidate.query_id,
+                    candidate.protein_id,
+                )
+                query_protein_id = canonical_query_ids[
+                    candidate.query_id
+                ]
+
+                domain_evidence[pair] = evaluate_domain_pairs(
+                    query_protein_id,
+                    candidate.protein_id,
+                    domain_index,
+                    domain_rules,
+                    domain_rules_path,
+                )
+
         functional_evidence: dict[
             tuple[str, str],
             list[FunctionalEvidence],
@@ -439,34 +558,59 @@ class InteractionCandidatePipeline:
             pair = (candidate.query_id, candidate.protein_id)
             context = contexts.get(pair)
             operon = operons.get(pair)
+            domains = domain_evidence.get(pair, [])
             functional = functional_evidence.get(pair, [])
+
             statuses = {
                 engine: EvidenceStatus.NOT_RUN
                 for engine in _UNIMPLEMENTED_ENGINES
             }
+            statuses["gene_context"] = (
+                context.status
+                if context
+                else EvidenceStatus.NOT_RUN
+            )
+            statuses["operon"] = (
+                operon.status
+                if operon
+                else EvidenceStatus.NOT_RUN
+            )
+            statuses["domains"] = (
+                domains[0].status
+                if domains
+                else EvidenceStatus.NOT_RUN
+            )
             statuses["functional_complementarity"] = (
                 functional[0].status
                 if functional
                 else EvidenceStatus.NOT_RUN
             )
-            statuses["gene_context"] = context.status if context else EvidenceStatus.NOT_RUN
-            statuses["operon"] = operon.status if operon else EvidenceStatus.NOT_RUN
+
             context_warnings = context.warnings if context else []
             operon_warnings = operon.warnings if operon else []
+            domain_warnings = [
+                warning
+                for evidence in domains
+                for warning in evidence.warnings
+            ]
             functional_warnings = [
                 warning
                 for evidence in functional
                 for warning in evidence.warnings
             ]
+
             bundles.append(
                 CandidateEvidenceBundle(
+                    domains=domains,
                     functional=functional,
                     run_id=run_id,
                     query_id=candidate.query_id,
                     candidate_id=candidate.protein_id,
                     candidate=candidate,
                     candidate_disposition=candidate.disposition,
-                    predicted_relationship_type=PredictedRelationshipType.INSUFFICIENT_EVIDENCE,
+                    predicted_relationship_type=(
+                        PredictedRelationshipType.INSUFFICIENT_EVIDENCE
+                    ),
                     genome_context=[context] if context else [],
                     operon=[operon] if operon else [],
                     engine_statuses=statuses,
@@ -477,6 +621,7 @@ class InteractionCandidatePipeline:
                             candidate.warnings
                             + context_warnings
                             + operon_warnings
+                            + domain_warnings
                             + functional_warnings
                         )
                     ),
@@ -491,6 +636,7 @@ class InteractionCandidatePipeline:
             output_path / "candidate_table.tsv",
             contexts=contexts,
             operons=operons,
+            domains=domain_evidence,
             functional=functional_evidence,
         )
         all_warnings = [warning for bundle in bundles for warning in bundle.warnings]
@@ -504,6 +650,10 @@ class InteractionCandidatePipeline:
                 rows_by_sheet={
                     "Gene_Context": _excel_context_rows(run_id, contexts),
                     "Operon_Proxy": _excel_operon_rows(run_id, operons),
+                    "Domain_Complementarity": _excel_domain_rows(
+                        run_id,
+                        domain_evidence,
+                    ),
                     "Functional_Complementarity": _excel_functional_rows(
                         run_id,
                         functional_evidence,
@@ -546,6 +696,11 @@ class InteractionCandidatePipeline:
             manifest.policy_settings[
                 "functional_complementarity_rule_version"
             ] = FUNCTIONAL_COMPLEMENTARITY_ENGINE_VERSION
+
+        if config.domains.enabled:
+            manifest.policy_settings[
+                "domain_pair_rule_version"
+            ] = DOMAIN_PAIR_ENGINE_VERSION
 
         manifest.policy_settings = policies | manifest.policy_settings
         manifest.warnings = sorted(set(all_warnings))

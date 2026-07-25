@@ -1,6 +1,12 @@
 """Public domain model API."""
 
 from protein_interaction_hunter.models.annotation import AnnotationRecord
+from protein_interaction_hunter.models.domain import DomainAnnotationRecord
+from protein_interaction_hunter.models.domain_rules import (
+    DomainPairRule,
+    DomainPairRuleset,
+    DomainRoleRule,
+)
 from protein_interaction_hunter.models.enums import (
     CandidateDisposition,
     ContextCompleteness,
@@ -96,4 +102,8 @@ __all__ = [
     "FunctionalComplementarityRuleset",
     "FunctionalPairRule",
     "FunctionalRoleRule",
+    "DomainAnnotationRecord",
+    "DomainPairRule",
+    "DomainPairRuleset",
+    "DomainRoleRule",
 ]

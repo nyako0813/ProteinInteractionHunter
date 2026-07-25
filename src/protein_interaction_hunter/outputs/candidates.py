@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from protein_interaction_hunter.models.evidence import (
+    DomainEvidence,
     FunctionalEvidence,
     GenomeContextEvidence,
     OperonEvidence,
@@ -91,6 +92,17 @@ CANDIDATE_COLUMNS = (
     "functional_conflicting_terms",
     "functional_rule_versions",
     "functional_warnings",
+    "domain_status",
+    "domain_pair_matched",
+    "domain_pair_rule_ids",
+    "domain_candidate_accessions",
+    "domain_query_accessions",
+    "domain_candidate_roles",
+    "domain_is_shared",
+    "domain_support_terms",
+    "domain_conflicting_terms",
+    "domain_rule_versions",
+    "domain_warnings",
 )
 
 
@@ -103,8 +115,8 @@ def _value(value: Any) -> Any:
         return ""
     return value.value if hasattr(value, "value") else value
 
-def _functional_values(
-    evidence: Sequence[FunctionalEvidence],
+def _evidence_values(
+    evidence: Sequence[DomainEvidence | FunctionalEvidence],
     attribute: str,
 ) -> str:
     values: set[str] = set()
@@ -129,8 +141,21 @@ class CandidateTableTsvWriter:
         run_id: str,
         candidates: Sequence[CandidateProtein],
         path: Path,
-        contexts: Mapping[tuple[str, str], GenomeContextEvidence] | None = None,
-        operons: Mapping[tuple[str, str], OperonEvidence] | None = None,
+        contexts: Mapping[
+            tuple[str, str],
+            GenomeContextEvidence,
+        ]
+        | None = None,
+        operons: Mapping[
+            tuple[str, str],
+            OperonEvidence,
+        ]
+        | None = None,
+        domains: Mapping[
+            tuple[str, str],
+            Sequence[DomainEvidence],
+        ]
+        | None = None,
         functional: Mapping[
             tuple[str, str],
             Sequence[FunctionalEvidence],
@@ -146,11 +171,13 @@ class CandidateTableTsvWriter:
         writer.writeheader()
         context_map = contexts or {}
         operon_map = operons or {}
+        domain_map = domains or {}
         functional_map = functional or {}
         for candidate in sorted(candidates, key=lambda item: (item.query_id, item.protein_id)):
             pair = (candidate.query_id, candidate.protein_id)
             context = context_map.get(pair)
             operon = operon_map.get(pair)
+            domain_records = domain_map.get(pair, ())
             functional_records = functional_map.get(pair, ())
             writer.writerow(
                 {
@@ -268,51 +295,95 @@ class CandidateTableTsvWriter:
                         operon.proxy_rule_id if operon else None
                     ),
                     "operon_warnings": _list(operon.warnings) if operon else "",
-                    "functional_status": _functional_values(
+                    "domain_status": _evidence_values(
+                        domain_records,
+                        "status",
+                    ),
+                    "domain_pair_matched": _evidence_values(
+                        domain_records,
+                        "pair_matched",
+                    ),
+                    "domain_pair_rule_ids": _evidence_values(
+                        domain_records,
+                        "pair_rule_id",
+                    ),
+                    "domain_candidate_accessions": _evidence_values(
+                        domain_records,
+                        "accession",
+                    ),
+                    "domain_query_accessions": _evidence_values(
+                        domain_records,
+                        "paired_accession",
+                    ),
+                    "domain_candidate_roles": _evidence_values(
+                        domain_records,
+                        "role",
+                    ),
+                    "domain_is_shared": _evidence_values(
+                        domain_records,
+                        "is_shared",
+                    ),
+                    "domain_support_terms": _evidence_values(
+                        domain_records,
+                        "support_terms",
+                    ),
+                    "domain_conflicting_terms": _evidence_values(
+                        domain_records,
+                        "conflicting_terms",
+                    ),
+                    "domain_rule_versions": _evidence_values(
+                        domain_records,
+                        "calculation_rule_version",
+                    ),
+                    "domain_warnings": _evidence_values(
+                        domain_records,
+                        "warnings",
+                    ),
+                    "functional_status": _evidence_values(
                         functional_records,
                         "status",
                     ),
-                    "functional_matched": _functional_values(
+                    "functional_matched": _evidence_values(
                         functional_records,
                         "matched",
                     ),
-                    "functional_relationship_hints": _functional_values(
+                    "functional_relationship_hints": _evidence_values(
                         functional_records,
                         "relationship_hint",
                     ),
-                    "functional_rule_ids": _functional_values(
+                    "functional_rule_ids": _evidence_values(
                         functional_records,
                         "rule_id",
                     ),
-                    "functional_query_roles": _functional_values(
+                    "functional_query_roles": _evidence_values(
                         functional_records,
                         "query_role",
                     ),
-                    "functional_candidate_roles": _functional_values(
+                    "functional_candidate_roles": _evidence_values(
                         functional_records,
                         "candidate_role",
                     ),
-                    "functional_query_matched_terms": _functional_values(
+                    "functional_query_matched_terms": _evidence_values(
                         functional_records,
                         "query_matched_terms",
                     ),
-                    "functional_candidate_matched_terms": _functional_values(
+                    "functional_candidate_matched_terms": _evidence_values(
                         functional_records,
                         "candidate_matched_terms",
                     ),
-                    "functional_support_terms": _functional_values(
+                    "functional_support_terms": _evidence_values(
                         functional_records,
                         "support_terms",
                     ),
-                    "functional_conflicting_terms": _functional_values(
+                    "functional_conflicting_terms": _evidence_values(
                         functional_records,
                         "conflicting_terms",
                     ),
-                    "functional_rule_versions": _functional_values(
+                    "functional_rule_versions": _evidence_values(
                         functional_records,
                         "calculation_rule_version",
                     ),
-                    "functional_warnings": _functional_values(
+                    "functional_warnings": _evidence_values(
                         functional_records,
                         "warnings",
                     ),

@@ -71,7 +71,9 @@ class EnabledConfig(StrictModel):
 
 class DomainConfig(StrictModel):
     enabled: bool = False
-    source: str = "none"
+    source: Literal["none", "local_table"] = "none"
+    local_table: Path | None = None
+    rules_path: Path | None = None
 
 
 class FunctionalComplementarityConfig(StrictModel):
@@ -166,9 +168,23 @@ def resolve_config_paths(config: AppConfig, base_directory: Path) -> AppConfig:
     input_data["reference_proteomes"] = [
         _resolve(path, base_directory) for path in input_data["reference_proteomes"]
     ]
-    data["orthology"]["database"] = _resolve(data["orthology"]["database"], base_directory)
+    data["orthology"]["database"] = _resolve(
+        data["orthology"]["database"],
+        base_directory,
+    )
+
+    data["domains"]["local_table"] = _resolve(
+        data["domains"]["local_table"],
+        base_directory,
+    )
+    data["domains"]["rules_path"] = _resolve(
+        data["domains"]["rules_path"],
+        base_directory,
+    )
+
     data["functional_complementarity"]["rules_path"] = _resolve(
-        data["functional_complementarity"]["rules_path"], base_directory
+        data["functional_complementarity"]["rules_path"],
+        base_directory,
     )
     data["known_interactions"]["local_table"] = _resolve(
         data["known_interactions"]["local_table"], base_directory

@@ -33,6 +33,18 @@ def e2e_config(source: Path, tmp_path: Path) -> Path:
             (fixture_dir / annotation_table).resolve()
         )
 
+    domain_table = data["domains"].get("local_table")
+    if domain_table is not None:
+        data["domains"]["local_table"] = str(
+            (fixture_dir / domain_table).resolve()
+        )
+
+    domain_rules_path = data["domains"].get("rules_path")
+    if domain_rules_path is not None:
+        data["domains"]["rules_path"] = str(
+            (fixture_dir / domain_rules_path).resolve()
+        )
+
     rules_path = data["functional_complementarity"].get(
         "rules_path"
     )
@@ -77,6 +89,11 @@ def test_pipeline_gene_context_scores_and_jsonl_round_trip(
             bundle.engine_statuses["functional_complementarity"]
             is bundle.functional[0].status
         )
+        assert len(bundle.domains) >= 1
+        assert (
+            bundle.engine_statuses["domains"]
+            is bundle.domains[0].status
+        )
 
         assert all(
             status is EvidenceStatus.NOT_RUN
@@ -85,6 +102,7 @@ def test_pipeline_gene_context_scores_and_jsonl_round_trip(
             not in {
                 "gene_context",
                 "operon",
+                "domains",
                 "functional_complementarity",
             }
         )

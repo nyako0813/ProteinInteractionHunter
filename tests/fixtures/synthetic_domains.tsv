@@ -1,0 +1,6 @@
+protein_id	source	accession	name	start	end	architecture_index
+QUERY_001	Pfam	PF00001	Catalytic enzyme domain	2	45	0
+NEAR_001	Pfam	PF00002	Accessory factor domain	5	42	0
+MEM_001	Pfam	PF00003	Membrane association domain	4	40	0
+HOUSE_001	Pfam	PF00004	Housekeeping domain	3	44	0
+FRAG_001	Pfam	PF00005	Fragment domain	2	20	0

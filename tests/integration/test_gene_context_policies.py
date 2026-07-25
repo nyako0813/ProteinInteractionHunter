@@ -31,17 +31,25 @@ def config_copy(
             (fixture_dir / annotation_table).resolve()
         )
 
-    rules_path = raw["functional_complementarity"].get(
-        "rules_path"
-    )
-    if rules_path is not None:
-        raw["functional_complementarity"]["rules_path"] = str(
-            (fixture_dir / rules_path).resolve()
+    domain_table = raw["domains"].get("local_table")
+    if domain_table is not None:
+        raw["domains"]["local_table"] = str(
+            (fixture_dir / domain_table).resolve()
         )
 
-    raw["output"]["directory"] = str(
-        tmp_path / f"{name}_output"
-    )
+    domain_rules_path = raw["domains"].get("rules_path")
+    if domain_rules_path is not None:
+        raw["domains"]["rules_path"] = str(
+            (fixture_dir / domain_rules_path).resolve()
+        )
+
+    functional_rules_path = raw[
+        "functional_complementarity"
+    ].get("rules_path")
+    if functional_rules_path is not None:
+        raw["functional_complementarity"]["rules_path"] = str(
+            (fixture_dir / functional_rules_path).resolve()
+        )
 
     return raw, tmp_path / f"{name}.yaml"
 

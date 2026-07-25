@@ -30,8 +30,10 @@ orthology:
 phylogenetic_profile:
   enabled: false
 domains:
-  enabled: false
-  source: none
+  enabled: true
+  source: local_table
+  local_table: synthetic_domains.tsv
+  rules_path: rules/domain_pairs.v1.yaml
 functional_complementarity:
   enabled: true
   rules_path: rules/functional_complementarity.v1.yaml

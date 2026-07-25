@@ -1,0 +1,37 @@
+ruleset_version: mvp1e-domain-pair-v1
+
+roles:
+  - role_id: catalytic_domain
+    accessions:
+      - PF00001
+
+  - role_id: accessory_domain
+    accessions:
+      - PF00002
+
+  - role_id: membrane_association_domain
+    accessions:
+      - PF00003
+
+  - role_id: housekeeping_domain
+    accessions:
+      - PF00004
+
+pair_rules:
+  - rule_id: catalytic-accessory-domain-v1
+    query_role: catalytic_domain
+    candidate_role: accessory_domain
+    support_terms:
+      - catalytic_domain
+      - accessory_domain
+    conflicting_terms: []
+    allow_shared_accession: false
+
+  - rule_id: catalytic-membrane-domain-v1
+    query_role: catalytic_domain
+    candidate_role: membrane_association_domain
+    support_terms:
+      - catalytic_domain
+      - membrane_association_domain
+    conflicting_terms: []
+    allow_shared_accession: false

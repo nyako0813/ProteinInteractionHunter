@@ -490,6 +490,39 @@
           "default": null,
           "title": "Accession"
         },
+        "architecture_index": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Architecture Index"
+        },
+        "calculation_rule_version": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Calculation Rule Version"
+        },
+        "conflicting_terms": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Conflicting Terms",
+          "type": "array"
+        },
         "end": {
           "anyOf": [
             {
@@ -532,6 +565,18 @@
           "$ref": "#/$defs/EvidenceOrigin",
           "default": "inferred"
         },
+        "pair_matched": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Pair Matched"
+        },
         "pair_rule_id": {
           "anyOf": [
             {
@@ -544,6 +589,32 @@
           ],
           "default": null,
           "title": "Pair Rule Id"
+        },
+        "paired_accession": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Paired Accession"
+        },
+        "paired_protein_id": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Paired Protein Id"
         },
         "protein_id": {
           "minLength": 1,
@@ -584,6 +655,32 @@
           "default": null,
           "title": "Role"
         },
+        "ruleset_path": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ruleset Path"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source"
+        },
         "start": {
           "anyOf": [
             {
@@ -600,6 +697,13 @@
         "status": {
           "$ref": "#/$defs/EvidenceStatus",
           "default": "not_run"
+        },
+        "support_terms": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Support Terms",
+          "type": "array"
         },
         "warnings": {
           "items": {

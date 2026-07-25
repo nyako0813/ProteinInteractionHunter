@@ -118,14 +118,23 @@ class PhylogeneticProfileEvidence(BaseEvidence):
 
 
 class DomainEvidence(BaseEvidence):
+    calculation_rule_version: NonEmptyStr | None = None
     protein_id: NonEmptyStr
+    source: NonEmptyStr | None = None
     accession: NonEmptyStr | None = None
     name: NonEmptyStr | None = None
     start: int | None = Field(default=None, ge=1)
     end: int | None = Field(default=None, ge=1)
+    architecture_index: int | None = Field(default=None, ge=0)
     role: NonEmptyStr | None = None
     pair_rule_id: NonEmptyStr | None = None
+    paired_protein_id: NonEmptyStr | None = None
+    paired_accession: NonEmptyStr | None = None
     is_shared: bool | None = None
+    pair_matched: bool | None = None
+    support_terms: list[str] = Field(default_factory=list)
+    conflicting_terms: list[str] = Field(default_factory=list)
+    ruleset_path: NonEmptyStr | None = None
 
 
 class FunctionalEvidence(BaseEvidence):
