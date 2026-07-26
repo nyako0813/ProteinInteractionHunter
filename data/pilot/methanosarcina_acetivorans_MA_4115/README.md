@@ -153,3 +153,136 @@ cd /home/nyako/projects/ProteinInteractionHunter
 
 Next-stage evidence should come from explicit domain/function and localization/TM tools or
 curated databases; no such external tool is run by this annotation pilot.
+
+## InterProScan domain annotation follow-up
+
+### Fixed software and environment
+
+This workflow used official classic InterProScan 5 release `5.78-109.0` (released
+2026-06-11; InterPro 109.0 and Pfam 38.2), downloaded from official EMBL-EBI FTP:
+
+```text
+https://ftp.ebi.ac.uk/pub/software/unix/iprscan/5/5.78-109.0/
+interproscan-5.78-109.0-64-bit.tar.gz
+MD5 3bb9a0794e9d69a0418a5298cdb04445
+```
+
+The verified archive was 7,037,746,512 bytes; the extracted installation is about 35 GiB at
+`/home/nyako/tools/interproscan/5.78-109.0/` on the WSL Linux filesystem, not `/mnt/c`.
+The runtime is Eclipse Temurin JRE `11.0.32+9` at
+`/home/nyako/tools/java/temurin-11.0.32+9/`; its archive SHA256 is
+`87ab4bf8dec10775d986957bc313816678f9227f1d033d7d6e6a1d00dace5b95`. No system
+Python or repository environment was changed. The launcher heap maximum was reduced from 15 GiB
+to 8 GiB because WSL has 15 GiB RAM and 4 GiB swap. The host exposed 16 logical CPUs and about
+948 GiB was free on the Linux filesystem before installation.
+
+Official documentation used:
+
+- <https://interproscan-docs.readthedocs.io/en/v5/ReleaseNotes.html>
+- <https://interproscan-docs.readthedocs.io/en/v5/InstallationRequirements.html>
+- <https://interproscan-docs.readthedocs.io/en/v5/HowToRun.html>
+- <https://interproscan-docs.readthedocs.io/en/v5/OutputFormats.html>
+- <https://interproscan-docs.readthedocs.io/en/v5/ImprovingPerformance.html>
+
+InterProScan software is Apache-licensed, while bundled member databases retain their own terms.
+Only installed Pfam 38.2 was used. Licensed components such as SignalP, Phobius, and TMHMM were
+not acquired or used. `-dp` disabled EBI precalculated-match lookup, so no sequences were
+uploaded. Current InterPro mappings plus GO and pathway fields were requested with
+`-goterms -pa`.
+
+### Commands and raw runs
+
+Installed `interproscan.sh --help` was checked first. The compact equivalents of the timed
+commands are:
+
+```bash
+interproscan.sh -i query_MA_4115.faa -f TSV -appl Pfam -cpu 2 -dp   -goterms -pa -vtsv -b MA_4115_pfam
+interproscan.sh -i interproscan_subset.faa -f TSV -appl Pfam -cpu 4 -dp   -goterms -pa -vtsv -b subset_pfam
+interproscan.sh -i proteome.faa -f TSV -appl Pfam -cpu 4 -dp   -goterms -pa -vtsv -b full_pfam
+```
+
+All exited 0. Query-only took 55.43 s (peak RSS 3,764,908 KiB). The deterministic subset had 55
+proteins/31,430 aa and took 66.28 s (peak RSS 3,619,488 KiB). Selection comprised the query,
+unique ±10 CDS, minimal-pilot nearest 20, the first eight accession-sorted hypothetical or
+uncharacterized products, the first eight products matching membrane/transporter/permease/
+symporter/antiporter, and the eight longest and eight shortest proteins. IDs were deduplicated
+and final FASTA accession-sorted. Membership and reasons are in
+`output/interproscan/subset_selection_audit.tsv`.
+
+The subset produced 166 Pfam hits across 40/55 proteins (72.727273%); the other 15 were valid
+no-hits, not errors. It had 53 unique Pfam accessions, 39 proteins with InterPro accessions, 21
+with GO terms, 25 with pathways, 12 multi-hit proteins, and 8 repeated-signature proteins. Raw
+TSV size was 77,792 bytes.
+
+The environment was therefore `READY_TO_RUN` for conservative Pfam-only full proteome.
+The 4,627-protein run completed in 5:41.86 (peak RSS 3,689,820 KiB), exit 0, no swaps, and a
+6,727,739-byte raw TSV. UTC times, commands, version, stdout/stderr, and `time -v` are under
+`output/interproscan/`. This conclusion does not promise the resources required by all
+bundled analyses.
+
+### Converter and formal table
+
+`scripts/convert_interproscan_domains.py` validates InterProScan 5 TSV, accepts comments and
+empty files, preserves IDs/analysis/signature/description/coordinates, sorts deterministically,
+and writes UTF-8/LF. Only exact duplicate input rows are removed. Non-overlapping repeats remain
+separate; a conflicting formal identity is fatal. Bad column counts or coordinates are fatal.
+Proteome-unknown IDs remain in audit but are excluded from formal output. The audit preserves
+InterPro accession/description, score or e-value, status/date, GO, pathways, MD5/length, version,
+and source path.
+
+The formal loader requires exactly:
+
+```text
+protein_id  source  accession  name  start  end  architecture_index
+```
+
+`name` may be empty per row; identity fields and valid 1-based coordinates are required.
+There are no formal score, e-value, status, InterPro, GO, or pathway columns. The loader rejects
+malformed/duplicate identities, retains overlaps and repeats, and accepts a header-only table.
+A domain table alone is not interaction evidence: a separately sourced domain-pair rule YAML and
+domains on query and candidate are also required.
+
+The full conversion produced 5,618 formal rows for 3,421/4,627 proteins (73.935595%), 1,206
+no-hits, and 1,909 unique Pfam accessions. InterPro coverage was 3,336 proteins (72.098552%), GO
+1,668 (36.049276%), and pathways 2,002 (43.267776%). It found 1,138 multi-hit and 301 repeated-
+signature proteins. Of 1,085 hypothetical/uncharacterized proteins, 49 had a hit; 3,372/3,542
+other proteins had a hit. Exact duplicates, unknown IDs, malformed rows, and excluded rows were
+all zero.
+
+### MA_4115 result and interpretation
+
+| Protein | Analysis | Signature | Description | Start-end | Score/e-value | InterPro | GO | Pathway |
+|---|---|---|---|---:|---|---|---|---|
+| WP_011024006.1 | Pfam | PF24167 | Family of unknown function (DUF7411) | 1-194 | 2.7E-76 | IPR055834, Protein of unknown function DUF7411 | none | none |
+
+The single signature covers 194/200 aa (0.97), with no overlap or repeat. It supports DUF7411
+membership but does not identify a catalytic family. It neither independently validates nor
+directly contradicts broad NCBI `alpha hydrolase` annotation because Pfam/InterPro labels
+remain function-unknown. It cannot establish substrate, mechanism, tRNA binding, sulfur
+insertion, cnm5U involvement, or interaction partner.
+
+### Coverage-only pilot and readiness
+
+`config/pilot_domains.yaml` points at the converted table and retains gene context plus NCBI
+annotation. `domains.enabled` is intentionally false and `rules_path` null because no
+real, versioned, biologically sourced MA_4115 domain-pair rules exist. Synthetic fixture rules
+were not reused and domain names were not turned into rules manually. Validation loaded 5,618
+rows on 3,421 known proteins, with zero unknown IDs and one query hit.
+
+The timed run produced the same 4,627 pairs, order, disposition, flags, annotation, gene context,
+and operon proxy as annotation-only. Excluding `run_id`, candidate TSV SHA256 was identical:
+`84c2c606cc8768271de057021d3e988fc231d3e1df02117572f976de4956340d`. Warning TSV was
+also identical: `3ba5b25a021000b79e24fe151f4e8c51beef2ae493160658bc7941b469a922b3`.
+The manifest records the domain table and SHA256. Domain evidence, scores, ranks, and tiers remain
+empty/not run. Runtime was 11.85 s and peak RSS 281,796 KiB.
+
+Domain-pair readiness is `NOT_READY`: annotation coverage is adequate, but there is no
+curated rule source/version, known-pair derivation, or biological basis for a formal match.
+Functional readiness is `NOT_READY`: GO/InterPro coverage exists, but no reviewed mapping to
+the functional engine vocabulary and no real complementarity rules exist. Mapping/provenance
+policy is a separate future stage; this workflow does not auto-fill `functional_category`.
+
+Raw InterProScan outputs, full converted table, subset FASTA, logs, cache, and large audits stay
+ignored. Intended commit candidates are converter, tests, config, README, and minimal validation/
+manifest changes. Work started at `f2b2c1208d7765328c1a0ee8c9144c9cf3200246`; no commit or
+push was performed.
