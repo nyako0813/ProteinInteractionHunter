@@ -1,6 +1,6 @@
 """Evidence records capable of representing unavailable and unrun engines."""
 
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from pydantic import Field, StringConstraints, model_validator
 
@@ -275,13 +275,72 @@ class FusionEvidence(BaseEvidence):
     source_record_ids: list[NonEmptyStr] = Field(default_factory=list)
 
 
-class KnownInteractionEvidence(BaseEvidence):
-    protein_a: NonEmptyStr
-    protein_b: NonEmptyStr
-    interaction_type: NonEmptyStr | None = None
+KnownInteractionType = Literal[
+    "physical",
+    "direct",
+    "genetic",
+    "functional_association",
+    "co_complex",
+    "co_expression",
+    "predicted",
+    "other",
+]
+
+
+IdentifierMappingStatus = Literal["mapped", "uncertain", "unmapped"]
+
+
+class KnownInteractionObservation(BaseEvidence):
+    protein_a_id: NonEmptyStr
+    protein_b_id: NonEmptyStr
+    interaction_type: KnownInteractionType
+    reference_organism: NonEmptyStr
     detection_method: NonEmptyStr | None = None
+    normalized_detection_method: NonEmptyStr | None = None
     publication_id: NonEmptyStr | None = None
-    taxonomic_distance: NonEmptyStr | None = None
+    confidence: float | None = Field(default=None, ge=0.0, le=1.0)
+    is_direct: bool | None = None
+    is_physical: bool | None = None
+    is_biological: bool | None = None
+    database_version: NonEmptyStr | None = None
+    protein_a_reference_id: NonEmptyStr | None = None
+    protein_b_reference_id: NonEmptyStr | None = None
+    source: NonEmptyStr
+    source_record_id: NonEmptyStr
+    notes: NonEmptyStr | None = None
+    identifier_mapping_status: IdentifierMappingStatus = "mapped"
+
+    @model_validator(mode="after")
+    def reject_self_interaction(self) -> "KnownInteractionObservation":
+        if self.protein_a_id == self.protein_b_id:
+            raise ValueError("interaction protein IDs must differ")
+        return self
+
+
+class KnownInteractionEvidence(BaseEvidence):
+    query_protein_id: NonEmptyStr
+    candidate_protein_id: NonEmptyStr
+    supporting_record_count: int = Field(ge=0)
+    qualifying_record_count: int = Field(ge=0)
+    direct_record_count: int = Field(ge=0)
+    physical_record_count: int = Field(ge=0)
+    biological_record_count: int = Field(ge=0)
+    independent_publication_count: int = Field(ge=0)
+    independent_source_count: int = Field(ge=0)
+    interaction_types: list[NonEmptyStr] = Field(default_factory=list)
+    detection_methods: list[NonEmptyStr] = Field(default_factory=list)
+    publication_ids: list[NonEmptyStr] = Field(default_factory=list)
+    reference_organisms: list[NonEmptyStr] = Field(default_factory=list)
+    sources: list[NonEmptyStr] = Field(default_factory=list)
+    source_record_ids: list[NonEmptyStr] = Field(default_factory=list)
+    best_confidence: float | None = Field(default=None, ge=0.0, le=1.0)
+    pair_supported: bool | None = None
+    direct_interaction_supported: bool | None = None
+    physical_interaction_supported: bool | None = None
+    functional_association_supported: bool | None = None
+    support_terms: list[str] = Field(default_factory=list)
+    conflicting_terms: list[str] = Field(default_factory=list)
+    calculation_rule_version: NonEmptyStr | None = None
 
 
 class ContradictionEvidence(BaseEvidence):

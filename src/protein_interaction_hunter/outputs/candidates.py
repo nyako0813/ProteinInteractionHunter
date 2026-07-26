@@ -12,6 +12,7 @@ from protein_interaction_hunter.models.evidence import (
     FunctionalEvidence,
     FusionEvidence,
     GenomeContextEvidence,
+    KnownInteractionEvidence,
     LocalizationEvidence,
     OperonEvidence,
     OrthologRecord,
@@ -163,6 +164,27 @@ CANDIDATE_COLUMNS = (
     "fusion_source",
     "fusion_source_record_ids",
     "fusion_warnings",
+    "known_interactions_status",
+    "known_interactions_supporting_record_count",
+    "known_interactions_qualifying_record_count",
+    "known_interactions_direct_record_count",
+    "known_interactions_physical_record_count",
+    "known_interactions_biological_record_count",
+    "known_interactions_interaction_types",
+    "known_interactions_detection_methods",
+    "known_interactions_publication_ids",
+    "known_interactions_reference_organisms",
+    "known_interactions_sources",
+    "known_interactions_source_record_ids",
+    "known_interactions_best_confidence",
+    "known_interactions_pair_supported",
+    "known_interactions_direct_supported",
+    "known_interactions_physical_supported",
+    "known_interactions_functional_association_supported",
+    "known_interactions_support_terms",
+    "known_interactions_conflicting_terms",
+    "known_interactions_rule_version",
+    "known_interactions_warnings",
 )
 
 
@@ -238,6 +260,7 @@ class CandidateTableTsvWriter:
         ]
         | None = None,
         fusion: Mapping[tuple[str, str], FusionEvidence] | None = None,
+        known_interactions: Mapping[tuple[str, str], KnownInteractionEvidence] | None = None,
     ) -> Path:
         output_path = path.expanduser().resolve()
         output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -254,6 +277,7 @@ class CandidateTableTsvWriter:
         orthology_map = orthology or {}
         phylogenetic_profile_map = phylogenetic_profile or {}
         fusion_map = fusion or {}
+        known_interactions_map = known_interactions or {}
         for candidate in sorted(candidates, key=lambda item: (item.query_id, item.protein_id)):
             pair = (candidate.query_id, candidate.protein_id)
             context = context_map.get(pair)
@@ -264,6 +288,7 @@ class CandidateTableTsvWriter:
             orthology_records = orthology_map.get(pair, ())
             profile = phylogenetic_profile_map.get(pair)
             fusion_evidence = fusion_map.get(pair)
+            known_interaction = known_interactions_map.get(pair)
             writer.writerow(
                 {
                     "run_id": run_id,
@@ -637,6 +662,75 @@ class CandidateTableTsvWriter:
                         _list(fusion_evidence.source_record_ids) if fusion_evidence else ""
                     ),
                     "fusion_warnings": (_list(fusion_evidence.warnings) if fusion_evidence else ""),
+                    "known_interactions_status": _value(
+                        known_interaction.status if known_interaction else None
+                    ),
+                    "known_interactions_supporting_record_count": _value(
+                        known_interaction.supporting_record_count if known_interaction else None
+                    ),
+                    "known_interactions_qualifying_record_count": _value(
+                        known_interaction.qualifying_record_count if known_interaction else None
+                    ),
+                    "known_interactions_direct_record_count": _value(
+                        known_interaction.direct_record_count if known_interaction else None
+                    ),
+                    "known_interactions_physical_record_count": _value(
+                        known_interaction.physical_record_count if known_interaction else None
+                    ),
+                    "known_interactions_biological_record_count": _value(
+                        known_interaction.biological_record_count if known_interaction else None
+                    ),
+                    "known_interactions_interaction_types": (
+                        _list(known_interaction.interaction_types) if known_interaction else ""
+                    ),
+                    "known_interactions_detection_methods": (
+                        _list(known_interaction.detection_methods) if known_interaction else ""
+                    ),
+                    "known_interactions_publication_ids": (
+                        _list(known_interaction.publication_ids) if known_interaction else ""
+                    ),
+                    "known_interactions_reference_organisms": (
+                        _list(known_interaction.reference_organisms) if known_interaction else ""
+                    ),
+                    "known_interactions_sources": (
+                        _list(known_interaction.sources) if known_interaction else ""
+                    ),
+                    "known_interactions_source_record_ids": (
+                        _list(known_interaction.source_record_ids) if known_interaction else ""
+                    ),
+                    "known_interactions_best_confidence": _value(
+                        known_interaction.best_confidence if known_interaction else None
+                    ),
+                    "known_interactions_pair_supported": _value(
+                        known_interaction.pair_supported if known_interaction else None
+                    ),
+                    "known_interactions_direct_supported": _value(
+                        known_interaction.direct_interaction_supported
+                        if known_interaction
+                        else None
+                    ),
+                    "known_interactions_physical_supported": _value(
+                        known_interaction.physical_interaction_supported
+                        if known_interaction
+                        else None
+                    ),
+                    "known_interactions_functional_association_supported": _value(
+                        known_interaction.functional_association_supported
+                        if known_interaction
+                        else None
+                    ),
+                    "known_interactions_support_terms": (
+                        _list(known_interaction.support_terms) if known_interaction else ""
+                    ),
+                    "known_interactions_conflicting_terms": (
+                        _list(known_interaction.conflicting_terms) if known_interaction else ""
+                    ),
+                    "known_interactions_rule_version": _value(
+                        known_interaction.calculation_rule_version if known_interaction else None
+                    ),
+                    "known_interactions_warnings": (
+                        _list(known_interaction.warnings) if known_interaction else ""
+                    ),
                 }
             )
         output_path.write_text(buffer.getvalue(), encoding="utf-8", newline="\n")

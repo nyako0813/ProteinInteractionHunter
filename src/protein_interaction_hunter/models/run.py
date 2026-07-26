@@ -57,6 +57,7 @@ class RunManifest(StrictModel):
     orthology_rule_version: NonEmptyStr | None = None
     phylogenetic_profile_rule_version: NonEmptyStr | None = None
     fusion_rule_version: NonEmptyStr | None = None
+    known_interactions_rule_version: NonEmptyStr | None = None
     policy_settings: dict[str, str | int | bool] = Field(default_factory=dict)
     parser_warnings: list[str] = Field(default_factory=list)
 

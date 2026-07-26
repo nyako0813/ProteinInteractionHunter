@@ -55,8 +55,20 @@ localization:
   enabled: false
   source: annotation_only
 known_interactions:
-  enabled: false
-  local_table: null
+  enabled: true
+  source: local_table
+  local_table: synthetic_known_interactions.tsv
+  minimum_supporting_records: 1
+  minimum_direct_records: 1
+  accepted_interaction_types:
+    - physical
+    - direct
+    - genetic
+    - functional_association
+  accepted_evidence_methods: []
+  excluded_evidence_methods:
+    - database_inference
+  minimum_confidence: 0.5
   external_services: []
 scoring:
   enabled: false

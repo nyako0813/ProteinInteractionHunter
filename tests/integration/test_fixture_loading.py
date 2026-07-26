@@ -21,7 +21,7 @@ from protein_interaction_hunter.models.enums import EvidenceStatus
 
 def test_synthetic_fasta_loads_and_normalizes(fixture_dir: Path) -> None:
     records = LocalFastaLoader().load(fixture_dir / "synthetic_proteome.fasta")
-    assert len(records) == 12
+    assert len(records) == 13
     assert records[0].protein_id == "QUERY_001"
     assert records[0].gene_id == "gene_query"
     assert records[0].locus_tag == "LT0001"
@@ -50,12 +50,12 @@ def test_synthetic_annotation_allows_missing_values(fixture_dir: Path) -> None:
 
 def test_combined_input_summary_and_query_existence(valid_config_path: Path) -> None:
     summary = validate_local_inputs(load_config(valid_config_path))
-    assert summary.protein_count == 12
+    assert summary.protein_count == 13
     assert summary.query_count == 1
     assert summary.gff_coordinate_count == 11
     assert summary.annotation_count == 11
     assert summary.duplicate_sequence_group_count == 1
-    assert summary.missing_coordinate_count == 1
+    assert summary.missing_coordinate_count == 2
     assert summary.hypothetical_protein_count == 1
 
 

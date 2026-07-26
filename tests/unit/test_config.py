@@ -152,3 +152,53 @@ def test_invalid_fusion_threshold_is_rejected(
     path.write_text(yaml.safe_dump(data), encoding="utf-8")
     with pytest.raises(ConfigurationError, match=field):
         load_config(path)
+
+
+def test_known_interactions_path_and_policy_are_resolved(valid_config_path: Path) -> None:
+    config = load_config(valid_config_path)
+    assert config.known_interactions.enabled is True
+    assert config.known_interactions.source == "local_table"
+    assert config.known_interactions.minimum_supporting_records == 1
+    assert config.known_interactions.minimum_direct_records == 1
+    assert config.known_interactions.minimum_confidence == 0.5
+    assert config.known_interactions.excluded_evidence_methods == ["database_inference"]
+    assert (
+        config.known_interactions.local_table
+        == (valid_config_path.parent / "synthetic_known_interactions.tsv").resolve()
+    )
+
+
+def test_absent_known_interactions_section_defaults_to_disabled(
+    valid_config_path: Path,
+    tmp_path: Path,
+) -> None:
+    data = yaml.safe_load(valid_config_path.read_text(encoding="utf-8"))
+    del data["known_interactions"]
+    path = tmp_path / "without-known.yaml"
+    path.write_text(yaml.safe_dump(data), encoding="utf-8")
+    config = load_config(path)
+    assert config.known_interactions.enabled is False
+    assert config.known_interactions.local_table is None
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("minimum_supporting_records", 0),
+        ("minimum_direct_records", -1),
+        ("minimum_confidence", -0.1),
+        ("minimum_confidence", 1.1),
+    ],
+)
+def test_invalid_known_interactions_threshold_is_rejected(
+    valid_config_path: Path,
+    tmp_path: Path,
+    field: str,
+    value: int | float,
+) -> None:
+    data = yaml.safe_load(valid_config_path.read_text(encoding="utf-8"))
+    data["known_interactions"][field] = value
+    path = tmp_path / f"invalid-known-{field}.yaml"
+    path.write_text(yaml.safe_dump(data), encoding="utf-8")
+    with pytest.raises(ConfigurationError, match=field):
+        load_config(path)

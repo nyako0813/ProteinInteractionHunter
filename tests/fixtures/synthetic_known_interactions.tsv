@@ -1,0 +1,8 @@
+protein_a_id	protein_b_id	interaction_type	reference_organism	detection_method	publication_id	confidence	is_direct	is_physical	is_biological	database_version	protein_a_reference_id	protein_b_reference_id	source	source_record_id	notes	identifier_mapping_status
+QUERY_001	NEAR_001	direct	Escherichia coli	Y2H	PMID:1001	0.90	true	true	true	2026.1	QREF1	NREF1	IntAct	IA-001	direct assay	mapped
+NEAR_001	QUERY_001	physical	Escherichia coli	SPR	PMID:1001	0.85	yes	yes	yes	2026.1	NREF2	QREF2	BioGRID	BG-001	reciprocal orientation	mapped
+QUERY_001	MID_001	functional_association	Bacillus subtilis	genetic interaction	PMID:2001	0.80	false	false	true	5.0	QREF3	MREF1	STRING-curated	ST-001	functional only	mapped
+QUERY_001	PARA_001	direct	Escherichia coli	pull-down	PMID:3001		true	true	true	2026.1	QREF4	PREF1	IntAct	IA-002	missing confidence	mapped
+QUERY_001	MEM_001	physical	Escherichia coli	database inference	PMID:4001	0.95	false	true	true	1.0	QREF5	MEMREF1	PredDB	PD-001	excluded method	mapped
+QUERY_001	CONTIG2_001	direct	Escherichia coli	co-IP	PMID:5001	0.20	true	true	true	2026.1	QREF6	CREF1	BioGRID	BG-002	low confidence	mapped
+QUERY_001	FRAG_001	predicted	Escherichia coli	database inference		0.90	false	false	false	1.0	QREF7	FREF1	PredDB	PD-002	predicted only	mapped

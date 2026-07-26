@@ -23,6 +23,9 @@ from protein_interaction_hunter.adapters.local.functional_rules import (
 )
 from protein_interaction_hunter.adapters.local.fusion import LocalFusionTsvLoader
 from protein_interaction_hunter.adapters.local.gff import LocalGff3Loader
+from protein_interaction_hunter.adapters.local.known_interactions import (
+    LocalKnownInteractionsTsvLoader,
+)
 from protein_interaction_hunter.adapters.local.orthology import (
     LocalOrthologyTsvLoader,
 )
@@ -50,6 +53,11 @@ from protein_interaction_hunter.application.gene_context import (
     calculate_gene_context,
 )
 from protein_interaction_hunter.application.identifiers import NORMALIZATION_RULE_VERSION
+from protein_interaction_hunter.application.known_interactions import (
+    KNOWN_INTERACTIONS_ENGINE_VERSION,
+    build_known_interaction_index,
+    evaluate_known_interaction_pair,
+)
 from protein_interaction_hunter.application.localization import (
     LOCALIZATION_ENGINE_VERSION,
     evaluate_localization,
@@ -87,6 +95,7 @@ from protein_interaction_hunter.models.evidence import (
     FunctionalEvidence,
     FusionEvidence,
     GenomeContextEvidence,
+    KnownInteractionEvidence,
     LocalizationEvidence,
     OperonEvidence,
     OrthologRecord,
@@ -103,7 +112,6 @@ from protein_interaction_hunter.outputs.jsonl import (
 )
 
 _UNIMPLEMENTED_ENGINES = (
-    "known_interactions",
     "scoring",
     "evidence_tiers",
 )
@@ -536,6 +544,53 @@ def _excel_fusion_rows(
     return rows
 
 
+def _excel_known_interaction_rows(
+    run_id: str,
+    evidence_by_pair: dict[tuple[str, str], KnownInteractionEvidence],
+) -> list[dict[str, object]]:
+    rows: list[dict[str, object]] = []
+    for (query_id, candidate_id), evidence in sorted(evidence_by_pair.items()):
+        rows.append(
+            {
+                "Run_ID": run_id,
+                "Query_ID": query_id,
+                "Candidate_ID": candidate_id,
+                "Status": evidence.status,
+                "Supporting_Record_Count": evidence.supporting_record_count,
+                "Qualifying_Record_Count": evidence.qualifying_record_count,
+                "Direct_Record_Count": evidence.direct_record_count,
+                "Physical_Record_Count": evidence.physical_record_count,
+                "Biological_Record_Count": evidence.biological_record_count,
+                "Independent_Publication_Count": evidence.independent_publication_count,
+                "Independent_Source_Count": evidence.independent_source_count,
+                "Interaction_Types": "|".join(evidence.interaction_types),
+                "Detection_Methods": "|".join(evidence.detection_methods),
+                "Publication_IDs": "|".join(evidence.publication_ids),
+                "Reference_Organisms": "|".join(evidence.reference_organisms),
+                "Sources": "|".join(evidence.sources),
+                "Source_Record_IDs": "|".join(evidence.source_record_ids),
+                "Best_Confidence": evidence.best_confidence,
+                "Pair_Supported": evidence.pair_supported,
+                "Direct_Interaction_Supported": evidence.direct_interaction_supported,
+                "Physical_Interaction_Supported": evidence.physical_interaction_supported,
+                "Functional_Association_Supported": evidence.functional_association_supported,
+                "Support_Terms": "|".join(evidence.support_terms),
+                "Conflicting_Terms": "|".join(evidence.conflicting_terms),
+                "Rule_Version": evidence.calculation_rule_version,
+                "Warnings": "|".join(evidence.warnings),
+                "Provenance": "|".join(
+                    "{}:{}:{}".format(
+                        item.source_name,
+                        item.source_version or "",
+                        item.method or "",
+                    )
+                    for item in evidence.provenance
+                ),
+            }
+        )
+    return rows
+
+
 class InteractionCandidatePipeline:
     """Generate auditable candidates and coordinate-derived context without scoring."""
 
@@ -677,6 +732,34 @@ class InteractionCandidatePipeline:
                     ),
                 )
 
+        known_interaction_evidence: dict[tuple[str, str], KnownInteractionEvidence] = {}
+        if config.known_interactions.enabled:
+            interaction_table_path = config.known_interactions.local_table
+            if interaction_table_path is None:
+                raise InputValidationError(
+                    "known_interactions.local_table is required when "
+                    "known_interactions.enabled is true"
+                )
+            interaction_records = LocalKnownInteractionsTsvLoader().load(interaction_table_path)
+            interaction_index = build_known_interaction_index(interaction_records)
+            for candidate in generated.candidates:
+                pair = (candidate.query_id, candidate.protein_id)
+                known_interaction_evidence[pair] = evaluate_known_interaction_pair(
+                    canonical_query_ids[candidate.query_id],
+                    candidate.protein_id,
+                    interaction_index,
+                    minimum_supporting_records=(
+                        config.known_interactions.minimum_supporting_records
+                    ),
+                    minimum_direct_records=(config.known_interactions.minimum_direct_records),
+                    accepted_interaction_types=(
+                        config.known_interactions.accepted_interaction_types
+                    ),
+                    accepted_evidence_methods=(config.known_interactions.accepted_evidence_methods),
+                    excluded_evidence_methods=(config.known_interactions.excluded_evidence_methods),
+                    minimum_confidence=config.known_interactions.minimum_confidence,
+                )
+
         domain_evidence: dict[
             tuple[str, str],
             list[DomainEvidence],
@@ -814,6 +897,7 @@ class InteractionCandidatePipeline:
             orthology = orthology_evidence.get(pair, [])
             profile = phylogenetic_profile_evidence.get(pair)
             fusion = fusion_evidence.get(pair)
+            known_interaction = known_interaction_evidence.get(pair)
 
             statuses = {engine: EvidenceStatus.NOT_RUN for engine in _UNIMPLEMENTED_ENGINES}
             statuses["gene_context"] = context.status if context else EvidenceStatus.NOT_RUN
@@ -828,6 +912,9 @@ class InteractionCandidatePipeline:
             statuses["orthology"] = orthology[0].status if orthology else EvidenceStatus.NOT_RUN
             statuses["phylogenetic_profile"] = profile.status if profile else EvidenceStatus.NOT_RUN
             statuses["fusion"] = fusion.status if fusion else EvidenceStatus.NOT_RUN
+            statuses["known_interactions"] = (
+                known_interaction.status if known_interaction else EvidenceStatus.NOT_RUN
+            )
 
             context_warnings = context.warnings if context else []
             operon_warnings = operon.warnings if operon else []
@@ -841,6 +928,7 @@ class InteractionCandidatePipeline:
             ]
             profile_warnings = profile.warnings if profile else []
             fusion_warnings = fusion.warnings if fusion else []
+            known_interaction_warnings = known_interaction.warnings if known_interaction else []
             bundles.append(
                 CandidateEvidenceBundle(
                     domains=domains,
@@ -849,6 +937,7 @@ class InteractionCandidatePipeline:
                     orthology=orthology,
                     phylogenetic_profile=[profile] if profile else [],
                     fusion=[fusion] if fusion else [],
+                    known_interactions=([known_interaction] if known_interaction else []),
                     run_id=run_id,
                     query_id=candidate.query_id,
                     candidate_id=candidate.protein_id,
@@ -871,6 +960,7 @@ class InteractionCandidatePipeline:
                             + orthology_warnings
                             + profile_warnings
                             + fusion_warnings
+                            + known_interaction_warnings
                         )
                     ),
                 )
@@ -890,6 +980,7 @@ class InteractionCandidatePipeline:
             orthology=orthology_evidence,
             phylogenetic_profile=phylogenetic_profile_evidence,
             fusion=fusion_evidence,
+            known_interactions=known_interaction_evidence,
         )
         all_warnings = [warning for bundle in bundles for warning in bundle.warnings]
         warning_summary_path = WarningSummaryTsvWriter().write(
@@ -925,6 +1016,9 @@ class InteractionCandidatePipeline:
                         )
                     ),
                     "Fusion_Evidence": _excel_fusion_rows(run_id, fusion_evidence),
+                    "Known_Interactions_Evidence": (
+                        _excel_known_interaction_rows(run_id, known_interaction_evidence)
+                    ),
                 },
             )
         input_files = [
@@ -962,6 +1056,14 @@ class InteractionCandidatePipeline:
                     required=True,
                 )
             )
+        if config.known_interactions.enabled and config.known_interactions.local_table is not None:
+            input_files.append(
+                build_input_file_manifest(
+                    "known_interactions_local_table",
+                    config.known_interactions.local_table,
+                    required=True,
+                )
+            )
         manifest = build_run_manifest(
             run_id=run_id,
             run_name=config.project.run_name,
@@ -985,6 +1087,9 @@ class InteractionCandidatePipeline:
             PHYLOGENETIC_PROFILE_ENGINE_VERSION if config.phylogenetic_profile.enabled else None
         )
         manifest.fusion_rule_version = FUSION_ENGINE_VERSION if config.fusion.enabled else None
+        manifest.known_interactions_rule_version = (
+            KNOWN_INTERACTIONS_ENGINE_VERSION if config.known_interactions.enabled else None
+        )
 
         if config.gene_context.enabled:
             manifest.policy_settings["operon_proxy_rule_version"] = OPERON_PROXY_RULE_VERSION
@@ -1017,6 +1122,8 @@ class InteractionCandidatePipeline:
             manifest.incomplete_evidence_flags.append("phylogenetic_profile_not_run")
         if not config.fusion.enabled:
             manifest.incomplete_evidence_flags.append("fusion_not_run")
+        if not config.known_interactions.enabled:
+            manifest.incomplete_evidence_flags.append("known_interactions_not_run")
         manifest_path = JsonRunManifestWriter().write(manifest, output_path / "run_manifest.json")
         disposition_counts = {
             disposition: sum(

@@ -1677,20 +1677,26 @@
     "KnownInteractionEvidence": {
       "additionalProperties": false,
       "properties": {
-        "detection_method": {
+        "best_confidence": {
           "anyOf": [
             {
-              "minLength": 1,
-              "type": "string"
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
             },
             {
               "type": "null"
             }
           ],
           "default": null,
-          "title": "Detection Method"
+          "title": "Best Confidence"
         },
-        "interaction_type": {
+        "biological_record_count": {
+          "minimum": 0,
+          "title": "Biological Record Count",
+          "type": "integer"
+        },
+        "calculation_rule_version": {
           "anyOf": [
             {
               "minLength": 1,
@@ -1701,21 +1707,107 @@
             }
           ],
           "default": null,
-          "title": "Interaction Type"
+          "title": "Calculation Rule Version"
+        },
+        "candidate_protein_id": {
+          "minLength": 1,
+          "title": "Candidate Protein Id",
+          "type": "string"
+        },
+        "conflicting_terms": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Conflicting Terms",
+          "type": "array"
+        },
+        "detection_methods": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Detection Methods",
+          "type": "array"
+        },
+        "direct_interaction_supported": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Direct Interaction Supported"
+        },
+        "direct_record_count": {
+          "minimum": 0,
+          "title": "Direct Record Count",
+          "type": "integer"
+        },
+        "functional_association_supported": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Functional Association Supported"
+        },
+        "independent_publication_count": {
+          "minimum": 0,
+          "title": "Independent Publication Count",
+          "type": "integer"
+        },
+        "independent_source_count": {
+          "minimum": 0,
+          "title": "Independent Source Count",
+          "type": "integer"
+        },
+        "interaction_types": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Interaction Types",
+          "type": "array"
         },
         "origin": {
           "$ref": "#/$defs/EvidenceOrigin",
           "default": "inferred"
         },
-        "protein_a": {
-          "minLength": 1,
-          "title": "Protein A",
-          "type": "string"
+        "pair_supported": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Pair Supported"
         },
-        "protein_b": {
-          "minLength": 1,
-          "title": "Protein B",
-          "type": "string"
+        "physical_interaction_supported": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Physical Interaction Supported"
+        },
+        "physical_record_count": {
+          "minimum": 0,
+          "title": "Physical Record Count",
+          "type": "integer"
         },
         "provenance": {
           "items": {
@@ -1724,18 +1816,18 @@
           "title": "Provenance",
           "type": "array"
         },
-        "publication_id": {
-          "anyOf": [
-            {
-              "minLength": 1,
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Publication Id"
+        "publication_ids": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Publication Ids",
+          "type": "array"
+        },
+        "qualifying_record_count": {
+          "minimum": 0,
+          "title": "Qualifying Record Count",
+          "type": "integer"
         },
         "quality": {
           "anyOf": [
@@ -1751,22 +1843,50 @@
           "default": null,
           "title": "Quality"
         },
+        "query_protein_id": {
+          "minLength": 1,
+          "title": "Query Protein Id",
+          "type": "string"
+        },
+        "reference_organisms": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Reference Organisms",
+          "type": "array"
+        },
+        "source_record_ids": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Source Record Ids",
+          "type": "array"
+        },
+        "sources": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Sources",
+          "type": "array"
+        },
         "status": {
           "$ref": "#/$defs/EvidenceStatus",
           "default": "not_run"
         },
-        "taxonomic_distance": {
-          "anyOf": [
-            {
-              "minLength": 1,
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Taxonomic Distance"
+        "support_terms": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Support Terms",
+          "type": "array"
+        },
+        "supporting_record_count": {
+          "minimum": 0,
+          "title": "Supporting Record Count",
+          "type": "integer"
         },
         "warnings": {
           "items": {
@@ -1777,8 +1897,15 @@
         }
       },
       "required": [
-        "protein_a",
-        "protein_b"
+        "query_protein_id",
+        "candidate_protein_id",
+        "supporting_record_count",
+        "qualifying_record_count",
+        "direct_record_count",
+        "physical_record_count",
+        "biological_record_count",
+        "independent_publication_count",
+        "independent_source_count"
       ],
       "title": "KnownInteractionEvidence",
       "type": "object"

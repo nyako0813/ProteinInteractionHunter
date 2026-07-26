@@ -189,6 +189,19 @@
       "title": "Input Files",
       "type": "array"
     },
+    "known_interactions_rule_version": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Known Interactions Rule Version"
+    },
     "normalization_rule_version": {
       "anyOf": [
         {

@@ -4,6 +4,7 @@ import csv
 import json
 from pathlib import Path
 
+import pytest
 import yaml
 from openpyxl import load_workbook
 from typer.testing import CliRunner
@@ -11,6 +12,9 @@ from typer.testing import CliRunner
 from protein_interaction_hunter.application.fusion import FUSION_ENGINE_VERSION
 from protein_interaction_hunter.application.gene_context import GENE_CONTEXT_RULE_VERSION
 from protein_interaction_hunter.application.identifiers import NORMALIZATION_RULE_VERSION
+from protein_interaction_hunter.application.known_interactions import (
+    KNOWN_INTERACTIONS_ENGINE_VERSION,
+)
 from protein_interaction_hunter.application.localization import (
     LOCALIZATION_ENGINE_VERSION,
 )
@@ -22,6 +26,7 @@ from protein_interaction_hunter.application.phylogenetic_profile import (
 )
 from protein_interaction_hunter.application.pipeline import InteractionCandidatePipeline
 from protein_interaction_hunter.cli import app
+from protein_interaction_hunter.exceptions import InputValidationError
 from protein_interaction_hunter.models import CandidateEvidenceBundle, EvidenceStatus, RunManifest
 from protein_interaction_hunter.outputs.candidates import CANDIDATE_COLUMNS
 from protein_interaction_hunter.outputs.jsonl import JsonlEvidenceBundleWriter
@@ -49,6 +54,10 @@ def e2e_config(source: Path, tmp_path: Path) -> Path:
     profile_table = data["phylogenetic_profile"].get("local_table")
     if profile_table is not None:
         data["phylogenetic_profile"]["local_table"] = str((fixture_dir / profile_table).resolve())
+
+    interaction_table = data["known_interactions"].get("local_table")
+    if interaction_table is not None:
+        data["known_interactions"]["local_table"] = str((fixture_dir / interaction_table).resolve())
 
     fusion_table = data["fusion"].get("local_table")
     if fusion_table is not None:
@@ -79,7 +88,7 @@ def test_pipeline_gene_context_scores_and_jsonl_round_trip(
     valid_config_path: Path, tmp_path: Path
 ) -> None:
     result = InteractionCandidatePipeline().run(e2e_config(valid_config_path, tmp_path))
-    assert len(result.bundles) == 12
+    assert len(result.bundles) == 13
 
     for bundle in result.bundles:
         assert len(bundle.genome_context) == 1
@@ -105,6 +114,9 @@ def test_pipeline_gene_context_scores_and_jsonl_round_trip(
         assert len(bundle.fusion) == 1
         assert bundle.engine_statuses["fusion"] is bundle.fusion[0].status
 
+        assert len(bundle.known_interactions) == 1
+        assert bundle.engine_statuses["known_interactions"] is bundle.known_interactions[0].status
+
         assert all(
             status is EvidenceStatus.NOT_RUN
             for engine, status in bundle.engine_statuses.items()
@@ -118,6 +130,7 @@ def test_pipeline_gene_context_scores_and_jsonl_round_trip(
                 "orthology",
                 "phylogenetic_profile",
                 "fusion",
+                "known_interactions",
             }
         )
 
@@ -165,7 +178,7 @@ def test_candidate_tsv_header_and_manifest_provenance(
     ) as handle:
         reader = csv.reader(handle, delimiter="\t")
         assert tuple(next(reader)) == CANDIDATE_COLUMNS
-        assert len(list(reader)) == 12
+        assert len(list(reader)) == 13
 
     with result.candidate_table_path.open(
         encoding="utf-8",
@@ -206,6 +219,21 @@ def test_candidate_tsv_header_and_manifest_provenance(
     assert rows_by_id["PARA_001"]["fusion_status"] == "missing"
     assert rows_by_id["PARA_001"]["fusion_pair_supported"] == ""
 
+    assert rows_by_id["NEAR_001"]["known_interactions_status"] == "available"
+    assert rows_by_id["NEAR_001"]["known_interactions_supporting_record_count"] == "2"
+    assert rows_by_id["NEAR_001"]["known_interactions_direct_record_count"] == "2"
+    assert rows_by_id["NEAR_001"]["known_interactions_pair_supported"] == "True"
+    assert rows_by_id["MID_001"]["known_interactions_pair_supported"] == "False"
+    assert rows_by_id["MID_001"]["known_interactions_functional_association_supported"] == "True"
+    assert rows_by_id["PARA_001"]["known_interactions_status"] == "missing"
+    assert rows_by_id["PARA_001"]["known_interactions_pair_supported"] == ""
+    assert rows_by_id["FAR_001"]["known_interactions_status"] == "available"
+    assert rows_by_id["FAR_001"]["known_interactions_pair_supported"] == "False"
+    assert (
+        rows_by_id["NEAR_001"]["known_interactions_rule_version"]
+        == KNOWN_INTERACTIONS_ENGINE_VERSION
+    )
+
     assert rows_by_id["NEAR_001"]["localization_status"] == "available"
     assert rows_by_id["NEAR_001"]["localization_query_compartment"] == "cytosolic"
     assert rows_by_id["NEAR_001"]["localization_compartment"] == "cytosolic"
@@ -245,6 +273,10 @@ def test_candidate_tsv_header_and_manifest_provenance(
     assert "fusion_local_table" in input_files_by_name
     assert input_files_by_name["fusion_local_table"].required is True
     assert input_files_by_name["fusion_local_table"].sha256
+    assert manifest.known_interactions_rule_version == KNOWN_INTERACTIONS_ENGINE_VERSION
+    assert "known_interactions_local_table" in input_files_by_name
+    assert input_files_by_name["known_interactions_local_table"].required is True
+    assert input_files_by_name["known_interactions_local_table"].sha256
     assert manifest.policy_settings["fragment_policy"] == "flag"
     assert manifest.policy_settings["localization_rule_version"] == LOCALIZATION_ENGINE_VERSION
     assert "scoring_not_run" in manifest.incomplete_evidence_flags
@@ -253,6 +285,9 @@ def test_candidate_tsv_header_and_manifest_provenance(
 
     assert result.config_snapshot_path.is_file()
     assert result.warning_summary_path.is_file()
+    assert "known_interaction_records_with_missing_confidence:1" in (
+        result.warning_summary_path.read_text(encoding="utf-8")
+    )
     assert "fusion_records_with_missing_component_coverage:1" in (
         result.warning_summary_path.read_text(encoding="utf-8")
     )
@@ -301,6 +336,22 @@ def test_candidate_tsv_header_and_manifest_provenance(
     assert profiles_by_candidate["NEAR_001"]["Profile_Similarity"] == 1.0
     assert profiles_by_candidate["NEAR_001"]["Pair_Supported"] is True
     assert profiles_by_candidate["PARA_001"]["Status"] == "missing"
+
+    assert "Known_Interactions_Evidence" in workbook.sheetnames
+    interaction_sheet = workbook["Known_Interactions_Evidence"]
+    interaction_headers = [cell.value for cell in next(interaction_sheet.iter_rows(max_row=1))]
+    interaction_rows = [
+        dict(zip(interaction_headers, values, strict=True))
+        for values in interaction_sheet.iter_rows(min_row=2, values_only=True)
+    ]
+    interactions_by_candidate = {row["Candidate_ID"]: row for row in interaction_rows}
+    assert interactions_by_candidate["NEAR_001"]["Pair_Supported"] is True
+    assert interactions_by_candidate["NEAR_001"]["Direct_Record_Count"] == 2
+    assert interactions_by_candidate["NEAR_001"]["Independent_Publication_Count"] == 1
+    assert interactions_by_candidate["NEAR_001"]["Independent_Source_Count"] == 2
+    assert interactions_by_candidate["MID_001"]["Functional_Association_Supported"] is True
+    assert interactions_by_candidate["PARA_001"]["Status"] == "missing"
+    assert interactions_by_candidate["FAR_001"]["Pair_Supported"] is False
 
     assert "Localization_Evidence" in workbook.sheetnames
 
@@ -415,6 +466,51 @@ def test_fusion_is_shadow_only_in_enabled_disabled_ab_comparison(
         assert disabled.engine_statuses["fusion"] is EvidenceStatus.NOT_RUN
 
 
+def test_known_interactions_are_shadow_only_in_enabled_disabled_ab_comparison(
+    valid_config_path: Path,
+    tmp_path: Path,
+) -> None:
+    enabled_dir = tmp_path / "known-enabled"
+    enabled_dir.mkdir()
+    enabled_config = e2e_config(valid_config_path, enabled_dir)
+    enabled_result = InteractionCandidatePipeline().run(enabled_config)
+
+    disabled_data = yaml.safe_load(enabled_config.read_text(encoding="utf-8"))
+    disabled_data["known_interactions"]["enabled"] = False
+    disabled_data["output"]["directory"] = str(tmp_path / "known-disabled-output")
+    disabled_config = tmp_path / "known-disabled.yaml"
+    disabled_config.write_text(yaml.safe_dump(disabled_data, sort_keys=False), encoding="utf-8")
+    disabled_result = InteractionCandidatePipeline().run(disabled_config)
+
+    omitted_data = dict(disabled_data)
+    del omitted_data["known_interactions"]
+    omitted_data["output"] = dict(omitted_data["output"])
+    omitted_data["output"]["directory"] = str(tmp_path / "known-omitted-output")
+    omitted_config = tmp_path / "known-omitted.yaml"
+    omitted_config.write_text(yaml.safe_dump(omitted_data, sort_keys=False), encoding="utf-8")
+    omitted_result = InteractionCandidatePipeline().run(omitted_config)
+
+    assert [bundle.candidate_id for bundle in enabled_result.bundles] == [
+        bundle.candidate_id for bundle in disabled_result.bundles
+    ]
+    for enabled, disabled in zip(enabled_result.bundles, disabled_result.bundles, strict=True):
+        assert enabled.candidate_disposition == disabled.candidate_disposition
+        assert enabled.score == disabled.score
+        assert enabled.predicted_relationship_type == disabled.predicted_relationship_type
+        assert enabled.evidence_tier == disabled.evidence_tier
+        assert enabled.orthology == disabled.orthology
+        assert enabled.phylogenetic_profile == disabled.phylogenetic_profile
+        assert enabled.fusion == disabled.fusion
+        assert disabled.known_interactions == []
+        assert disabled.engine_statuses["known_interactions"] is EvidenceStatus.NOT_RUN
+
+    assert all(not bundle.known_interactions for bundle in omitted_result.bundles)
+    assert all(
+        bundle.engine_statuses["known_interactions"] is EvidenceStatus.NOT_RUN
+        for bundle in omitted_result.bundles
+    )
+
+
 def test_generate_candidates_cli_e2e_has_no_ranking_output(
     valid_config_path: Path, tmp_path: Path
 ) -> None:
@@ -422,8 +518,8 @@ def test_generate_candidates_cli_e2e_has_no_ranking_output(
     result = CliRunner().invoke(app, ["generate-candidates", "--config", str(config)])
     assert result.exit_code == 0, result.stdout
     assert "query_count: 1" in result.stdout
-    assert "protein_count: 12" in result.stdout
-    assert "query_candidate_pair_count: 12" in result.stdout
+    assert "protein_count: 13" in result.stdout
+    assert "query_candidate_pair_count: 13" in result.stdout
     assert "duplicate_group_count: 1" in result.stdout
     assert "same_contig_pair_count:" in result.stdout
     assert "different_contig_pair_count: 1" in result.stdout
@@ -446,3 +542,15 @@ def test_generate_candidates_cli_e2e_has_no_ranking_output(
     payload = json.loads((output / "run_manifest.json").read_text(encoding="utf-8"))
     assert payload["normalization_rule_version"] == NORMALIZATION_RULE_VERSION
     assert payload["gene_context_rule_version"] == GENE_CONTEXT_RULE_VERSION
+
+
+def test_enabled_known_interactions_requires_local_table(
+    valid_config_path: Path,
+    tmp_path: Path,
+) -> None:
+    config = e2e_config(valid_config_path, tmp_path)
+    data = yaml.safe_load(config.read_text(encoding="utf-8"))
+    data["known_interactions"]["local_table"] = None
+    config.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
+    with pytest.raises(InputValidationError, match="known_interactions.local_table is required"):
+        InteractionCandidatePipeline().run(config)

@@ -63,7 +63,18 @@ localization:
 
 known_interactions:
   enabled: false
+  source: local_table
   local_table: null
+  minimum_supporting_records: 1
+  minimum_direct_records: 1
+  accepted_interaction_types:
+    - physical
+    - direct
+    - genetic
+    - functional_association
+  accepted_evidence_methods: []
+  excluded_evidence_methods: []
+  minimum_confidence: null
   external_services: []
 
 scoring:

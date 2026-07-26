@@ -106,9 +106,34 @@ class LocalizationConfig(StrictModel):
     source: Literal["annotation_only"] = "annotation_only"
 
 
+InteractionType = Literal[
+    "physical",
+    "direct",
+    "genetic",
+    "functional_association",
+    "co_complex",
+    "co_expression",
+    "predicted",
+    "other",
+]
+
+
+def _default_accepted_interaction_types() -> list[InteractionType]:
+    return ["physical", "direct", "genetic", "functional_association"]
+
+
 class KnownInteractionsConfig(StrictModel):
     enabled: bool = False
+    source: Literal["local_table"] = "local_table"
     local_table: Path | None = None
+    minimum_supporting_records: int = Field(default=1, ge=1)
+    minimum_direct_records: int = Field(default=1, ge=0)
+    accepted_interaction_types: list[InteractionType] = Field(
+        default_factory=_default_accepted_interaction_types
+    )
+    accepted_evidence_methods: list[str] = Field(default_factory=list)
+    excluded_evidence_methods: list[str] = Field(default_factory=list)
+    minimum_confidence: float | None = Field(default=None, ge=0.0, le=1.0)
     external_services: list[str] = Field(default_factory=list)
 
 
@@ -166,7 +191,7 @@ class AppConfig(StrictModel):
     domains: DomainConfig
     functional_complementarity: FunctionalComplementarityConfig
     localization: LocalizationConfig
-    known_interactions: KnownInteractionsConfig
+    known_interactions: KnownInteractionsConfig = Field(default_factory=KnownInteractionsConfig)
     scoring: ScoringConfig
     evidence_tiers: EnabledConfig
     structure_prediction_queue: StructurePredictionQueueConfig

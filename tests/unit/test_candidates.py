@@ -55,7 +55,7 @@ def test_duplicate_group_id_and_candidate_order_are_deterministic(fixture_dir: P
 
 def test_multiple_queries_generate_deterministic_pair_sets(fixture_dir: Path) -> None:
     result = generate(fixture_dir, query_ids=["QUERY_001", "NEAR_001"])
-    assert len(result.candidates) == 24
+    assert len(result.candidates) == 26
     self_pairs = [item for item in result.candidates if item.query_id == item.protein_id]
     assert all(item.disposition is CandidateDisposition.EXCLUDED for item in self_pairs)
 
