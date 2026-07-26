@@ -97,3 +97,59 @@ annotation_confidence
 Additional provenance fields such as `old_locus_tag`, numeric `gene_id`, `description`,
 coordinates, source version, assembly accession, and organism are useful for future preparation,
 but are not accepted as substitutes for the required columns without a model change.
+
+## NCBI annotation pilot
+
+`scripts/build_ncbi_annotation_table.py` deterministically builds
+`input/annotation_ncbi.tsv` from the matching NCBI RefSeq proteome FASTA and GFF3. The formal
+loader table uses exactly these columns:
+
+```text
+protein_id
+gene_name
+locus_tag
+product
+functional_category
+localization_annotation
+transmembrane_annotation
+annotation_source
+annotation_confidence
+```
+
+GFF CDS product is preferred; a FASTA description with only its final organism suffix removed
+is the fallback when GFF product is absent. Gene name is populated only from an explicit `gene`
+attribute. Functional category, localization, transmembrane topology, and confidence remain
+empty because the NCBI inputs do not explicitly provide those fields in the required semantics.
+
+The build found 4,596 formal rows for 4,627 proteins (99.330019%). All 4,627 FASTA accessions
+occur in the GFF. Thirty-one multi-locus accessions are excluded from the formal one-row-per-ID
+table rather than assigning an arbitrary locus. Same-locus split CDS records are merged.
+`output/annotation/annotation_mapping_audit.tsv` retains every audited locus, and
+`output/annotation/annotation_coverage.tsv` records coverage.
+
+The annotation pilot differs from the minimal pilot only by run name, annotation input, and
+output/cache/log directories. Gene context remains enabled; functional complementarity,
+localization, scoring, and evidence tiers remain disabled. NCBI product text is not repurposed
+as functional category or localization evidence. Scoring remains disabled because gene context
+and operon proxy belong to the same genomic-context category.
+
+```bash
+cd /home/nyako/projects/ProteinInteractionHunter
+.venv/bin/python scripts/build_ncbi_annotation_table.py \
+  --fasta data/pilot/methanosarcina_acetivorans_MA_4115/input/proteome.faa \
+  --gff data/pilot/methanosarcina_acetivorans_MA_4115/input/genome.gff \
+  --annotation-output data/pilot/methanosarcina_acetivorans_MA_4115/input/annotation_ncbi.tsv \
+  --audit-output data/pilot/methanosarcina_acetivorans_MA_4115/output/annotation/annotation_mapping_audit.tsv \
+  --coverage-output data/pilot/methanosarcina_acetivorans_MA_4115/output/annotation/annotation_coverage.tsv \
+  --annotation-source "NCBI RefSeq GCF_000007345.1" \
+  --query-id WP_011024006.1
+.venv/bin/python -m protein_interaction_hunter validate-config \
+  --config data/pilot/methanosarcina_acetivorans_MA_4115/config/pilot_annotation.yaml
+.venv/bin/python -m protein_interaction_hunter validate-inputs \
+  --config data/pilot/methanosarcina_acetivorans_MA_4115/config/pilot_annotation.yaml
+/usr/bin/time -v .venv/bin/python -m protein_interaction_hunter generate-candidates \
+  --config data/pilot/methanosarcina_acetivorans_MA_4115/config/pilot_annotation.yaml
+```
+
+Next-stage evidence should come from explicit domain/function and localization/TM tools or
+curated databases; no such external tool is run by this annotation pilot.

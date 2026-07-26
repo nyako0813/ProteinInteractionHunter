@@ -8,7 +8,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from jsonschema import Draft202012Validator
+from jsonschema import Draft202012Validator  # type: ignore[import-untyped]
+from pydantic import BaseModel
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
@@ -24,7 +25,7 @@ from protein_interaction_hunter.schemas.versions import (  # noqa: E402
 )
 
 SCHEMA_DIRECTORY = ROOT / "schemas"
-SCHEMA_FILES = {
+SCHEMA_FILES: dict[SchemaName, tuple[type[BaseModel], str]] = {
     SchemaName.CANDIDATE_EVIDENCE_BUNDLE: (
         CandidateEvidenceBundle,
         "candidate_evidence_bundle.schema.json",
