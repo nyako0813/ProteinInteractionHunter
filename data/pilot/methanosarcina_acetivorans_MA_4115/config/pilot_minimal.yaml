@@ -1,0 +1,171 @@
+project:
+  name: ProteinInteractionHunter
+  run_name: methanosarcina_acetivorans_MA_4115_minimal_pilot
+  random_seed: 0
+  local_only: true
+
+input:
+  proteome_fasta: ../input/proteome.faa
+  genome_gff: ../input/genome.gff
+  annotation_table: null
+  reference_proteomes: []
+
+query:
+  protein_ids:
+    - WP_011024006.1
+  allow_multiple: false
+
+candidate_generation:
+  include_hypothetical_proteins: true
+  include_missing_coordinates: true
+  minimum_length_aa: 20
+  duplicate_sequence_policy: flag
+  fragment_policy: flag
+  self_candidate_policy: exclude
+
+gene_context:
+  enabled: true
+  require_query_coordinates: true
+  neighborhood_gene_count: 5
+  operon_proxy_max_intergenic_bp: 200
+
+orthology:
+  enabled: false
+  engine: blast
+  database: null
+
+phylogenetic_profile:
+  enabled: false
+  source: local_table
+  local_table: null
+  minimum_shared_species: 2
+  minimum_informative_species: 3
+  minimum_profile_similarity: 0.8
+
+fusion:
+  enabled: false
+  source: local_table
+  local_table: null
+  minimum_supporting_records: 1
+  minimum_component_coverage: 0.6
+  maximum_component_overlap_fraction: 0.2
+
+domains:
+  enabled: false
+  source: none
+
+functional_complementarity:
+  enabled: false
+  rules_path: null
+
+localization:
+  enabled: false
+  source: annotation_only
+
+known_interactions:
+  enabled: false
+  source: local_table
+  local_table: null
+  minimum_supporting_records: 1
+  minimum_direct_records: 1
+  accepted_interaction_types:
+    - physical
+    - direct
+    - genetic
+    - functional_association
+  accepted_evidence_methods: []
+  excluded_evidence_methods: []
+  minimum_confidence: null
+  external_services: []
+
+scoring:
+  enabled: false
+  rule_version: mvp1k-integrated-scoring-v1
+  output_scale: 100.0
+  minimum_evidence_weight: 1.0
+  minimum_evidence_categories: 2
+  missing_policy: exclude_from_denominator
+  tie_precision: 8
+  weights:
+    genome_context: 1.0
+    operon_proxy: 1.0
+    domain_pair: 1.0
+    functional_complementarity: 1.0
+    localization: 0.5
+    orthology: 0.75
+    phylogenetic_profile: 1.0
+    fusion: 1.5
+    known_interactions: 1.5
+  category_caps:
+    genomic_context: 1.5
+    functional_annotation: 1.5
+    cellular_compatibility: 0.5
+    evolutionary: 2.0
+    direct_interaction: 2.0
+  penalties:
+    contradictory_evidence: 0.25
+    ambiguous_mapping: 0.10
+
+evidence_tiers:
+  enabled: false
+  rule_version: mvp1l-evidence-tiers-v1
+  tier_1:
+    minimum_score: 75.0
+    minimum_categories: 4
+    minimum_components: 5
+    minimum_available_weight: 3.0
+    require_high_specificity_evidence: true
+    minimum_high_specificity_components: 1
+    maximum_negative_components: 0
+  tier_2:
+    minimum_score: 55.0
+    minimum_categories: 3
+    minimum_components: 4
+    minimum_available_weight: 2.0
+    require_high_specificity_evidence: false
+    minimum_high_specificity_components: 0
+    maximum_negative_components: 1
+  tier_3:
+    minimum_score: 25.0
+    minimum_categories: 2
+    minimum_components: 2
+    minimum_available_weight: 1.0
+    require_high_specificity_evidence: false
+    minimum_high_specificity_components: 0
+    maximum_negative_components: 2
+  tier_4:
+    minimum_score: 0.0
+    minimum_categories: 2
+    minimum_components: 2
+    minimum_available_weight: 1.0
+    require_high_specificity_evidence: false
+    minimum_high_specificity_components: 0
+    maximum_negative_components: 99
+  explicit_conflict_tier_cap: tier_3
+  predicted_only_tier_cap: tier_3
+  functional_association_only_tier_cap: tier_3
+  insufficient_evidence_tier: unclassified
+
+structure_prediction_queue:
+  enabled: false
+  maximum_entries: 20
+  write_pair_fasta: false
+  automatic_structure_prediction: false
+
+output:
+  directory: ../output/minimal
+  write_jsonl: true
+  write_tsv: true
+  write_excel: true
+  write_config_snapshot: true
+
+cache:
+  enabled: true
+  directory: ../.cache/minimal
+
+logging:
+  level: INFO
+  directory: ../logs/minimal
+
+performance:
+  workers: 1

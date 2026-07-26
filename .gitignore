@@ -18,3 +18,12 @@ output/
 .vscode/
 .DS_Store
 Thumbs.db
+
+# Local NCBI query datasets used for real-data pilots
+/data/MA_4115_datasets/
+
+# Generated real-data pilot artifacts
+/data/pilot/*/input/
+/data/pilot/*/output/
+/data/pilot/*/.cache/
+/data/pilot/*/logs/

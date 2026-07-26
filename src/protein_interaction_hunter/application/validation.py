@@ -7,10 +7,8 @@ from protein_interaction_hunter.adapters.local.fasta import (
     LocalFastaLoader,
     duplicate_sequence_groups,
 )
-from protein_interaction_hunter.adapters.local.gff import (
-    LocalGff3Loader,
-    coordinates_by_protein,
-)
+from protein_interaction_hunter.adapters.local.gff import LocalGff3Loader
+from protein_interaction_hunter.application.gene_context import build_coordinate_index
 from protein_interaction_hunter.config import AppConfig
 from protein_interaction_hunter.exceptions import InputValidationError
 from protein_interaction_hunter.models.base import StrictModel
@@ -39,10 +37,10 @@ def validate_local_inputs(config: AppConfig) -> InputValidationSummary:
             "Query IDs not found in proteome FASTA: " + ", ".join(missing_queries)
         )
 
-    features = LocalGff3Loader().load(config.input.genome_gff)
-    coordinate_index = coordinates_by_protein(features)
-    matched_ids = protein_ids & set(coordinate_index)
-    missing_coordinates = protein_ids - set(coordinate_index)
+    document = LocalGff3Loader().load_document(config.input.genome_gff)
+    coordinate_index = build_coordinate_index(proteins, document)
+    matched_ids = protein_ids & set(coordinate_index.by_protein)
+    missing_coordinates = protein_ids - set(coordinate_index.by_protein)
 
     annotations = []
     if config.input.annotation_table is not None:
@@ -73,8 +71,8 @@ def validate_local_inputs(config: AppConfig) -> InputValidationSummary:
     return InputValidationSummary(
         protein_count=len(proteins),
         query_count=len(config.query.protein_ids),
-        gff_feature_count=len(features),
-        gff_coordinate_count=len(coordinate_index),
+        gff_feature_count=len(document.features),
+        gff_coordinate_count=len(coordinate_index.by_protein),
         annotation_count=len(annotations),
         identifier_match_count=len(matched_ids),
         duplicate_sequence_group_count=len(duplicate_sequence_groups(proteins)),

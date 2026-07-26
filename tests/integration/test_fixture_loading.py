@@ -59,6 +59,46 @@ def test_combined_input_summary_and_query_existence(valid_config_path: Path) -> 
     assert summary.hypothetical_protein_count == 1
 
 
+def test_input_summary_treats_multi_locus_protein_as_ambiguous(
+    tmp_path: Path, valid_config_path: Path
+) -> None:
+    fasta = tmp_path / "multi_locus.fasta"
+    fasta.write_text(
+        ">Q query\nMSTKAA\n>P repeated protein\nMSTKCC\n",
+        encoding="utf-8",
+    )
+    gff = tmp_path / "multi_locus.gff3"
+    gff.write_text(
+        "##gff-version 3\n"
+        "##sequence-region c 1 1000\n"
+        "c\ttest\tCDS\t10\t30\t.\t+\t0\tID=cds-q;protein_id=Q\n"
+        "c\ttest\tCDS\t100\t120\t.\t+\t0\tID=cds-p1;protein_id=P\n"
+        "c\ttest\tCDS\t300\t320\t.\t+\t0\tID=cds-p2;protein_id=P\n",
+        encoding="utf-8",
+    )
+    config = load_config(valid_config_path)
+    config = config.model_copy(
+        update={
+            "input": config.input.model_copy(
+                update={
+                    "proteome_fasta": fasta,
+                    "genome_gff": gff,
+                    "annotation_table": None,
+                }
+            ),
+            "query": config.query.model_copy(
+                update={"protein_ids": ["Q"], "allow_multiple": False}
+            ),
+        }
+    )
+
+    summary = validate_local_inputs(config)
+
+    assert summary.gff_coordinate_count == 1
+    assert summary.identifier_match_count == 1
+    assert summary.missing_coordinate_count == 1
+
+
 def test_gff_document_retains_sequence_region(fixture_dir: Path) -> None:
     document = LocalGff3Loader().load_document(fixture_dir / "synthetic_genome.gff3")
     assert document.sequence_regions["contig1"].start == 1
