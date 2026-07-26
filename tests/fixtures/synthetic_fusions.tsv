@@ -1,0 +1,5 @@
+query_protein_id	candidate_protein_id	fusion_protein_id	reference_organism	query_component_start	query_component_end	candidate_component_start	candidate_component_end	fusion_protein_length	query_component_reference_id	candidate_component_reference_id	query_component_coverage	candidate_component_coverage	query_component_identity	candidate_component_identity	evalue_query	evalue_candidate	source	source_record_id
+QUERY_001	NEAR_001	FUSION_A	Organism alpha	1	80	101	180	200	QREF_A	NREF_A	0.80	0.75	0.70	0.68	1e-20	2e-18	synthetic_fusions	fusion-row-1
+NEAR_001	QUERY_001	FUSION_B	Organism beta	10	70	90	170	190	NREF_B	QREF_B	0.70	0.90	0.65	0.82	3e-15	1e-25	synthetic_fusions	fusion-row-2
+QUERY_001	MEM_001	FUSION_C	Organism alpha	1	90	50	130	150			0.50	0.85					synthetic_fusions	fusion-row-3
+QUERY_001	PARA_001	FUSION_D	Organism gamma	1	60	80	145	160			0.80						synthetic_fusions	fusion-row-4

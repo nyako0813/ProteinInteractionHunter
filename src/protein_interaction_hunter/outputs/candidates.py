@@ -10,6 +10,7 @@ from typing import Any
 from protein_interaction_hunter.models.evidence import (
     DomainEvidence,
     FunctionalEvidence,
+    FusionEvidence,
     GenomeContextEvidence,
     LocalizationEvidence,
     OperonEvidence,
@@ -147,6 +148,21 @@ CANDIDATE_COLUMNS = (
     "phylogenetic_profile_rule_version",
     "phylogenetic_profile_source",
     "phylogenetic_profile_warnings",
+    "fusion_status",
+    "fusion_supporting_record_count",
+    "fusion_qualifying_record_count",
+    "fusion_reference_organisms",
+    "fusion_protein_ids",
+    "fusion_best_query_component_coverage",
+    "fusion_best_candidate_component_coverage",
+    "fusion_minimum_component_overlap_fraction",
+    "fusion_pair_supported",
+    "fusion_support_terms",
+    "fusion_conflicting_terms",
+    "fusion_rule_version",
+    "fusion_source",
+    "fusion_source_record_ids",
+    "fusion_warnings",
 )
 
 
@@ -221,6 +237,7 @@ class CandidateTableTsvWriter:
             PhylogeneticProfileEvidence,
         ]
         | None = None,
+        fusion: Mapping[tuple[str, str], FusionEvidence] | None = None,
     ) -> Path:
         output_path = path.expanduser().resolve()
         output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -236,6 +253,7 @@ class CandidateTableTsvWriter:
         functional_map = functional or {}
         orthology_map = orthology or {}
         phylogenetic_profile_map = phylogenetic_profile or {}
+        fusion_map = fusion or {}
         for candidate in sorted(candidates, key=lambda item: (item.query_id, item.protein_id)):
             pair = (candidate.query_id, candidate.protein_id)
             context = context_map.get(pair)
@@ -245,6 +263,7 @@ class CandidateTableTsvWriter:
             functional_records = functional_map.get(pair, ())
             orthology_records = orthology_map.get(pair, ())
             profile = phylogenetic_profile_map.get(pair)
+            fusion_evidence = fusion_map.get(pair)
             writer.writerow(
                 {
                     "run_id": run_id,
@@ -575,6 +594,49 @@ class CandidateTableTsvWriter:
                     ),
                     "phylogenetic_profile_source": _value(profile.source if profile else None),
                     "phylogenetic_profile_warnings": (_list(profile.warnings) if profile else ""),
+                    "fusion_status": _value(fusion_evidence.status if fusion_evidence else None),
+                    "fusion_supporting_record_count": _value(
+                        fusion_evidence.supporting_record_count if fusion_evidence else None
+                    ),
+                    "fusion_qualifying_record_count": _value(
+                        fusion_evidence.qualifying_record_count if fusion_evidence else None
+                    ),
+                    "fusion_reference_organisms": (
+                        _list(fusion_evidence.reference_organisms) if fusion_evidence else ""
+                    ),
+                    "fusion_protein_ids": (
+                        _list(fusion_evidence.fusion_protein_ids) if fusion_evidence else ""
+                    ),
+                    "fusion_best_query_component_coverage": _value(
+                        fusion_evidence.best_query_component_coverage if fusion_evidence else None
+                    ),
+                    "fusion_best_candidate_component_coverage": _value(
+                        fusion_evidence.best_candidate_component_coverage
+                        if fusion_evidence
+                        else None
+                    ),
+                    "fusion_minimum_component_overlap_fraction": _value(
+                        fusion_evidence.minimum_component_overlap_fraction
+                        if fusion_evidence
+                        else None
+                    ),
+                    "fusion_pair_supported": _value(
+                        fusion_evidence.pair_supported if fusion_evidence else None
+                    ),
+                    "fusion_support_terms": (
+                        _list(fusion_evidence.support_terms) if fusion_evidence else ""
+                    ),
+                    "fusion_conflicting_terms": (
+                        _list(fusion_evidence.conflicting_terms) if fusion_evidence else ""
+                    ),
+                    "fusion_rule_version": _value(
+                        fusion_evidence.calculation_rule_version if fusion_evidence else None
+                    ),
+                    "fusion_source": _value(fusion_evidence.source if fusion_evidence else None),
+                    "fusion_source_record_ids": (
+                        _list(fusion_evidence.source_record_ids) if fusion_evidence else ""
+                    ),
+                    "fusion_warnings": (_list(fusion_evidence.warnings) if fusion_evidence else ""),
                 }
             )
         output_path.write_text(buffer.getvalue(), encoding="utf-8", newline="\n")

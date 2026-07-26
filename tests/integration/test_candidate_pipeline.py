@@ -8,6 +8,7 @@ import yaml
 from openpyxl import load_workbook
 from typer.testing import CliRunner
 
+from protein_interaction_hunter.application.fusion import FUSION_ENGINE_VERSION
 from protein_interaction_hunter.application.gene_context import GENE_CONTEXT_RULE_VERSION
 from protein_interaction_hunter.application.identifiers import NORMALIZATION_RULE_VERSION
 from protein_interaction_hunter.application.localization import (
@@ -48,6 +49,10 @@ def e2e_config(source: Path, tmp_path: Path) -> Path:
     profile_table = data["phylogenetic_profile"].get("local_table")
     if profile_table is not None:
         data["phylogenetic_profile"]["local_table"] = str((fixture_dir / profile_table).resolve())
+
+    fusion_table = data["fusion"].get("local_table")
+    if fusion_table is not None:
+        data["fusion"]["local_table"] = str((fixture_dir / fusion_table).resolve())
 
     domain_rules_path = data["domains"].get("rules_path")
     if domain_rules_path is not None:
@@ -97,6 +102,9 @@ def test_pipeline_gene_context_scores_and_jsonl_round_trip(
             bundle.engine_statuses["phylogenetic_profile"] is bundle.phylogenetic_profile[0].status
         )
 
+        assert len(bundle.fusion) == 1
+        assert bundle.engine_statuses["fusion"] is bundle.fusion[0].status
+
         assert all(
             status is EvidenceStatus.NOT_RUN
             for engine, status in bundle.engine_statuses.items()
@@ -109,6 +117,7 @@ def test_pipeline_gene_context_scores_and_jsonl_round_trip(
                 "localization",
                 "orthology",
                 "phylogenetic_profile",
+                "fusion",
             }
         )
 
@@ -188,6 +197,15 @@ def test_candidate_tsv_header_and_manifest_provenance(
     assert rows_by_id["PARA_001"]["phylogenetic_profile_status"] == "missing"
     assert rows_by_id["PARA_001"]["phylogenetic_profile_pair_supported"] == ""
 
+    assert rows_by_id["NEAR_001"]["fusion_status"] == "available"
+    assert rows_by_id["NEAR_001"]["fusion_supporting_record_count"] == "2"
+    assert rows_by_id["NEAR_001"]["fusion_qualifying_record_count"] == "2"
+    assert rows_by_id["NEAR_001"]["fusion_pair_supported"] == "True"
+    assert rows_by_id["NEAR_001"]["fusion_rule_version"] == FUSION_ENGINE_VERSION
+    assert rows_by_id["MEM_001"]["fusion_pair_supported"] == "False"
+    assert rows_by_id["PARA_001"]["fusion_status"] == "missing"
+    assert rows_by_id["PARA_001"]["fusion_pair_supported"] == ""
+
     assert rows_by_id["NEAR_001"]["localization_status"] == "available"
     assert rows_by_id["NEAR_001"]["localization_query_compartment"] == "cytosolic"
     assert rows_by_id["NEAR_001"]["localization_compartment"] == "cytosolic"
@@ -223,6 +241,10 @@ def test_candidate_tsv_header_and_manifest_provenance(
     assert "phylogenetic_profile_local_table" in input_files_by_name
     assert input_files_by_name["phylogenetic_profile_local_table"].required is True
     assert input_files_by_name["phylogenetic_profile_local_table"].sha256
+    assert manifest.fusion_rule_version == FUSION_ENGINE_VERSION
+    assert "fusion_local_table" in input_files_by_name
+    assert input_files_by_name["fusion_local_table"].required is True
+    assert input_files_by_name["fusion_local_table"].sha256
     assert manifest.policy_settings["fragment_policy"] == "flag"
     assert manifest.policy_settings["localization_rule_version"] == LOCALIZATION_ENGINE_VERSION
     assert "scoring_not_run" in manifest.incomplete_evidence_flags
@@ -231,6 +253,9 @@ def test_candidate_tsv_header_and_manifest_provenance(
 
     assert result.config_snapshot_path.is_file()
     assert result.warning_summary_path.is_file()
+    assert "fusion_records_with_missing_component_coverage:1" in (
+        result.warning_summary_path.read_text(encoding="utf-8")
+    )
     assert result.excel_path is not None
     assert result.excel_path.is_file()
 
@@ -345,6 +370,49 @@ def test_profile_is_shadow_only_and_disabled_is_not_run(
         assert enabled.predicted_relationship_type == disabled.predicted_relationship_type
         assert disabled.phylogenetic_profile == []
         assert disabled.engine_statuses["phylogenetic_profile"] is EvidenceStatus.NOT_RUN
+
+
+def test_fusion_is_shadow_only_in_enabled_disabled_ab_comparison(
+    valid_config_path: Path,
+    tmp_path: Path,
+) -> None:
+    enabled_dir = tmp_path / "fusion-enabled"
+    enabled_dir.mkdir()
+    enabled_config = e2e_config(valid_config_path, enabled_dir)
+    enabled_result = InteractionCandidatePipeline().run(enabled_config)
+
+    disabled_data = yaml.safe_load(enabled_config.read_text(encoding="utf-8"))
+    disabled_data["fusion"]["enabled"] = False
+    disabled_data["output"]["directory"] = str(tmp_path / "fusion-disabled-output")
+    disabled_config = tmp_path / "fusion-disabled.yaml"
+    disabled_config.write_text(yaml.safe_dump(disabled_data, sort_keys=False), encoding="utf-8")
+    disabled_result = InteractionCandidatePipeline().run(disabled_config)
+
+    omitted_data = dict(disabled_data)
+    del omitted_data["fusion"]
+    omitted_data["output"] = dict(omitted_data["output"])
+    omitted_data["output"]["directory"] = str(tmp_path / "fusion-omitted-output")
+    omitted_config = tmp_path / "fusion-omitted.yaml"
+    omitted_config.write_text(yaml.safe_dump(omitted_data, sort_keys=False), encoding="utf-8")
+    omitted_result = InteractionCandidatePipeline().run(omitted_config)
+    assert all(not bundle.fusion for bundle in omitted_result.bundles)
+    assert all(
+        bundle.engine_statuses["fusion"] is EvidenceStatus.NOT_RUN
+        for bundle in omitted_result.bundles
+    )
+
+    assert [bundle.candidate_id for bundle in enabled_result.bundles] == [
+        bundle.candidate_id for bundle in disabled_result.bundles
+    ]
+    for enabled, disabled in zip(enabled_result.bundles, disabled_result.bundles, strict=True):
+        assert enabled.candidate_disposition == disabled.candidate_disposition
+        assert enabled.score == disabled.score
+        assert enabled.predicted_relationship_type == disabled.predicted_relationship_type
+        assert enabled.evidence_tier == disabled.evidence_tier
+        assert enabled.orthology == disabled.orthology
+        assert enabled.phylogenetic_profile == disabled.phylogenetic_profile
+        assert disabled.fusion == []
+        assert disabled.engine_statuses["fusion"] is EvidenceStatus.NOT_RUN
 
 
 def test_generate_candidates_cli_e2e_has_no_ranking_output(

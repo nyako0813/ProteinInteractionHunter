@@ -76,6 +76,15 @@ class PhylogeneticProfileConfig(StrictModel):
     minimum_profile_similarity: float = Field(default=0.8, ge=0.0, le=1.0)
 
 
+class FusionConfig(StrictModel):
+    enabled: bool = False
+    source: Literal["local_table"] = "local_table"
+    local_table: Path | None = None
+    minimum_supporting_records: int = Field(default=1, ge=1)
+    minimum_component_coverage: float = Field(default=0.6, ge=0.0, le=1.0)
+    maximum_component_overlap_fraction: float = Field(default=0.2, ge=0.0, le=1.0)
+
+
 class EnabledConfig(StrictModel):
     enabled: bool = False
 
@@ -153,6 +162,7 @@ class AppConfig(StrictModel):
     phylogenetic_profile: PhylogeneticProfileConfig = Field(
         default_factory=PhylogeneticProfileConfig
     )
+    fusion: FusionConfig = Field(default_factory=FusionConfig)
     domains: DomainConfig
     functional_complementarity: FunctionalComplementarityConfig
     localization: LocalizationConfig
@@ -191,6 +201,10 @@ def resolve_config_paths(config: AppConfig, base_directory: Path) -> AppConfig:
     )
     data["phylogenetic_profile"]["local_table"] = _resolve(
         data["phylogenetic_profile"]["local_table"],
+        base_directory,
+    )
+    data["fusion"]["local_table"] = _resolve(
+        data["fusion"]["local_table"],
         base_directory,
     )
 

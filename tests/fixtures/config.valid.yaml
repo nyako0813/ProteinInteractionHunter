@@ -36,6 +36,13 @@ phylogenetic_profile:
   minimum_shared_species: 2
   minimum_informative_species: 3
   minimum_profile_similarity: 0.8
+fusion:
+  enabled: true
+  source: local_table
+  local_table: synthetic_fusions.tsv
+  minimum_supporting_records: 1
+  minimum_component_coverage: 0.6
+  maximum_component_overlap_fraction: 0.2
 domains:
   enabled: true
   source: local_table

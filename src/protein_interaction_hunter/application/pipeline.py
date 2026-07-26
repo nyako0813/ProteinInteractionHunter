@@ -21,6 +21,7 @@ from protein_interaction_hunter.adapters.local.fasta import LocalFastaLoader
 from protein_interaction_hunter.adapters.local.functional_rules import (
     LocalFunctionalRulesLoader,
 )
+from protein_interaction_hunter.adapters.local.fusion import LocalFusionTsvLoader
 from protein_interaction_hunter.adapters.local.gff import LocalGff3Loader
 from protein_interaction_hunter.adapters.local.orthology import (
     LocalOrthologyTsvLoader,
@@ -37,6 +38,11 @@ from protein_interaction_hunter.application.domain_pairs import (
 from protein_interaction_hunter.application.functional_complementarity import (
     FUNCTIONAL_COMPLEMENTARITY_ENGINE_VERSION,
     evaluate_functional_complementarity,
+)
+from protein_interaction_hunter.application.fusion import (
+    FUSION_ENGINE_VERSION,
+    build_fusion_index,
+    evaluate_fusion_pair,
 )
 from protein_interaction_hunter.application.gene_context import (
     GENE_CONTEXT_RULE_VERSION,
@@ -79,6 +85,7 @@ from protein_interaction_hunter.models.evidence import (
     DomainEvidence,
     EvidenceProvenance,
     FunctionalEvidence,
+    FusionEvidence,
     GenomeContextEvidence,
     LocalizationEvidence,
     OperonEvidence,
@@ -96,7 +103,6 @@ from protein_interaction_hunter.outputs.jsonl import (
 )
 
 _UNIMPLEMENTED_ENGINES = (
-    "fusion",
     "known_interactions",
     "scoring",
     "evidence_tiers",
@@ -491,6 +497,45 @@ def _excel_phylogenetic_profile_rows(
     return rows
 
 
+def _excel_fusion_rows(
+    run_id: str,
+    fusion_evidence: dict[tuple[str, str], FusionEvidence],
+) -> list[dict[str, object]]:
+    rows: list[dict[str, object]] = []
+    for (query_id, candidate_id), evidence in sorted(fusion_evidence.items()):
+        rows.append(
+            {
+                "Run_ID": run_id,
+                "Query_ID": query_id,
+                "Candidate_ID": candidate_id,
+                "Status": evidence.status,
+                "Supporting_Record_Count": evidence.supporting_record_count,
+                "Qualifying_Record_Count": evidence.qualifying_record_count,
+                "Reference_Organisms": "|".join(evidence.reference_organisms),
+                "Fusion_Protein_IDs": "|".join(evidence.fusion_protein_ids),
+                "Best_Query_Component_Coverage": (evidence.best_query_component_coverage),
+                "Best_Candidate_Component_Coverage": (evidence.best_candidate_component_coverage),
+                "Minimum_Component_Overlap_Fraction": (evidence.minimum_component_overlap_fraction),
+                "Pair_Supported": evidence.pair_supported,
+                "Support_Terms": "|".join(evidence.support_terms),
+                "Conflicting_Terms": "|".join(evidence.conflicting_terms),
+                "Rule_Version": evidence.calculation_rule_version,
+                "Source": evidence.source,
+                "Source_Record_IDs": "|".join(evidence.source_record_ids),
+                "Warnings": "|".join(evidence.warnings),
+                "Provenance": "|".join(
+                    "{}:{}:{}".format(
+                        item.source_name,
+                        item.source_version or "",
+                        item.method or "",
+                    )
+                    for item in evidence.provenance
+                ),
+            }
+        )
+    return rows
+
+
 class InteractionCandidatePipeline:
     """Generate auditable candidates and coordinate-derived context without scoring."""
 
@@ -607,6 +652,28 @@ class InteractionCandidatePipeline:
                     ),
                     minimum_profile_similarity=(
                         config.phylogenetic_profile.minimum_profile_similarity
+                    ),
+                )
+
+        fusion_evidence: dict[tuple[str, str], FusionEvidence] = {}
+        if config.fusion.enabled:
+            fusion_table_path = config.fusion.local_table
+            if fusion_table_path is None:
+                raise InputValidationError(
+                    "fusion.local_table is required when fusion.enabled is true"
+                )
+            fusion_records = LocalFusionTsvLoader().load(fusion_table_path)
+            fusion_index = build_fusion_index(fusion_records)
+            for candidate in generated.candidates:
+                pair = (candidate.query_id, candidate.protein_id)
+                fusion_evidence[pair] = evaluate_fusion_pair(
+                    canonical_query_ids[candidate.query_id],
+                    candidate.protein_id,
+                    fusion_index,
+                    minimum_supporting_records=(config.fusion.minimum_supporting_records),
+                    minimum_component_coverage=(config.fusion.minimum_component_coverage),
+                    maximum_component_overlap_fraction=(
+                        config.fusion.maximum_component_overlap_fraction
                     ),
                 )
 
@@ -746,6 +813,7 @@ class InteractionCandidatePipeline:
             localization = localization_evidence.get(pair)
             orthology = orthology_evidence.get(pair, [])
             profile = phylogenetic_profile_evidence.get(pair)
+            fusion = fusion_evidence.get(pair)
 
             statuses = {engine: EvidenceStatus.NOT_RUN for engine in _UNIMPLEMENTED_ENGINES}
             statuses["gene_context"] = context.status if context else EvidenceStatus.NOT_RUN
@@ -759,6 +827,7 @@ class InteractionCandidatePipeline:
             )
             statuses["orthology"] = orthology[0].status if orthology else EvidenceStatus.NOT_RUN
             statuses["phylogenetic_profile"] = profile.status if profile else EvidenceStatus.NOT_RUN
+            statuses["fusion"] = fusion.status if fusion else EvidenceStatus.NOT_RUN
 
             context_warnings = context.warnings if context else []
             operon_warnings = operon.warnings if operon else []
@@ -771,6 +840,7 @@ class InteractionCandidatePipeline:
                 warning for evidence in orthology for warning in evidence.warnings
             ]
             profile_warnings = profile.warnings if profile else []
+            fusion_warnings = fusion.warnings if fusion else []
             bundles.append(
                 CandidateEvidenceBundle(
                     domains=domains,
@@ -778,6 +848,7 @@ class InteractionCandidatePipeline:
                     localization=([localization] if localization else []),
                     orthology=orthology,
                     phylogenetic_profile=[profile] if profile else [],
+                    fusion=[fusion] if fusion else [],
                     run_id=run_id,
                     query_id=candidate.query_id,
                     candidate_id=candidate.protein_id,
@@ -799,6 +870,7 @@ class InteractionCandidatePipeline:
                             + localization_warnings
                             + orthology_warnings
                             + profile_warnings
+                            + fusion_warnings
                         )
                     ),
                 )
@@ -817,6 +889,7 @@ class InteractionCandidatePipeline:
             functional=functional_evidence,
             orthology=orthology_evidence,
             phylogenetic_profile=phylogenetic_profile_evidence,
+            fusion=fusion_evidence,
         )
         all_warnings = [warning for bundle in bundles for warning in bundle.warnings]
         warning_summary_path = WarningSummaryTsvWriter().write(
@@ -851,6 +924,7 @@ class InteractionCandidatePipeline:
                             phylogenetic_profile_evidence,
                         )
                     ),
+                    "Fusion_Evidence": _excel_fusion_rows(run_id, fusion_evidence),
                 },
             )
         input_files = [
@@ -880,6 +954,14 @@ class InteractionCandidatePipeline:
                     required=True,
                 )
             )
+        if config.fusion.enabled and config.fusion.local_table is not None:
+            input_files.append(
+                build_input_file_manifest(
+                    "fusion_local_table",
+                    config.fusion.local_table,
+                    required=True,
+                )
+            )
         manifest = build_run_manifest(
             run_id=run_id,
             run_name=config.project.run_name,
@@ -902,6 +984,7 @@ class InteractionCandidatePipeline:
         manifest.phylogenetic_profile_rule_version = (
             PHYLOGENETIC_PROFILE_ENGINE_VERSION if config.phylogenetic_profile.enabled else None
         )
+        manifest.fusion_rule_version = FUSION_ENGINE_VERSION if config.fusion.enabled else None
 
         if config.gene_context.enabled:
             manifest.policy_settings["operon_proxy_rule_version"] = OPERON_PROXY_RULE_VERSION
@@ -932,6 +1015,8 @@ class InteractionCandidatePipeline:
             manifest.incomplete_evidence_flags.extend(["gene_context_not_run", "operon_not_run"])
         if not config.phylogenetic_profile.enabled:
             manifest.incomplete_evidence_flags.append("phylogenetic_profile_not_run")
+        if not config.fusion.enabled:
+            manifest.incomplete_evidence_flags.append("fusion_not_run")
         manifest_path = JsonRunManifestWriter().write(manifest, output_path / "run_manifest.json")
         disposition_counts = {
             disposition: sum(

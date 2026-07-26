@@ -1001,29 +1001,35 @@
     "FusionEvidence": {
       "additionalProperties": false,
       "properties": {
-        "candidate_region": {
+        "best_candidate_component_coverage": {
           "anyOf": [
             {
-              "maxItems": 2,
-              "minItems": 2,
-              "prefixItems": [
-                {
-                  "type": "integer"
-                },
-                {
-                  "type": "integer"
-                }
-              ],
-              "type": "array"
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
             },
             {
               "type": "null"
             }
           ],
           "default": null,
-          "title": "Candidate Region"
+          "title": "Best Candidate Component Coverage"
         },
-        "fused_protein_id": {
+        "best_query_component_coverage": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Best Query Component Coverage"
+        },
+        "calculation_rule_version": {
           "anyOf": [
             {
               "minLength": 1,
@@ -1034,11 +1040,57 @@
             }
           ],
           "default": null,
-          "title": "Fused Protein Id"
+          "title": "Calculation Rule Version"
+        },
+        "candidate_protein_id": {
+          "minLength": 1,
+          "title": "Candidate Protein Id",
+          "type": "string"
+        },
+        "conflicting_terms": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Conflicting Terms",
+          "type": "array"
+        },
+        "fusion_protein_ids": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Fusion Protein Ids",
+          "type": "array"
+        },
+        "minimum_component_overlap_fraction": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Minimum Component Overlap Fraction"
         },
         "origin": {
           "$ref": "#/$defs/EvidenceOrigin",
           "default": "inferred"
+        },
+        "pair_supported": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Pair Supported"
         },
         "provenance": {
           "items": {
@@ -1046,6 +1098,11 @@
           },
           "title": "Provenance",
           "type": "array"
+        },
+        "qualifying_record_count": {
+          "minimum": 0,
+          "title": "Qualifying Record Count",
+          "type": "integer"
         },
         "quality": {
           "anyOf": [
@@ -1061,29 +1118,20 @@
           "default": null,
           "title": "Quality"
         },
-        "query_region": {
-          "anyOf": [
-            {
-              "maxItems": 2,
-              "minItems": 2,
-              "prefixItems": [
-                {
-                  "type": "integer"
-                },
-                {
-                  "type": "integer"
-                }
-              ],
-              "type": "array"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Query Region"
+        "query_protein_id": {
+          "minLength": 1,
+          "title": "Query Protein Id",
+          "type": "string"
         },
-        "reference_id": {
+        "reference_organisms": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Reference Organisms",
+          "type": "array"
+        },
+        "source": {
           "anyOf": [
             {
               "minLength": 1,
@@ -1094,24 +1142,31 @@
             }
           ],
           "default": null,
-          "title": "Reference Id"
+          "title": "Source"
+        },
+        "source_record_ids": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Source Record Ids",
+          "type": "array"
         },
         "status": {
           "$ref": "#/$defs/EvidenceStatus",
           "default": "not_run"
         },
-        "taxonomic_support_count": {
-          "anyOf": [
-            {
-              "minimum": 0,
-              "type": "integer"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Taxonomic Support Count"
+        "support_terms": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Support Terms",
+          "type": "array"
+        },
+        "supporting_record_count": {
+          "minimum": 0,
+          "title": "Supporting Record Count",
+          "type": "integer"
         },
         "warnings": {
           "items": {
@@ -1121,6 +1176,12 @@
           "type": "array"
         }
       },
+      "required": [
+        "query_protein_id",
+        "candidate_protein_id",
+        "supporting_record_count",
+        "qualifying_record_count"
+      ],
       "title": "FusionEvidence",
       "type": "object"
     },

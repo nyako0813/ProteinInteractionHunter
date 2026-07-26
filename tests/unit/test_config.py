@@ -106,3 +106,49 @@ def test_absent_phylogenetic_profile_section_defaults_to_disabled(
     config = load_config(path)
     assert config.phylogenetic_profile.enabled is False
     assert config.phylogenetic_profile.local_table is None
+
+
+def test_fusion_path_and_thresholds_are_resolved(valid_config_path: Path) -> None:
+    config = load_config(valid_config_path)
+    assert config.fusion.enabled is True
+    assert config.fusion.minimum_supporting_records == 1
+    assert config.fusion.minimum_component_coverage == 0.6
+    assert config.fusion.maximum_component_overlap_fraction == 0.2
+    assert (
+        config.fusion.local_table == (valid_config_path.parent / "synthetic_fusions.tsv").resolve()
+    )
+
+
+def test_absent_fusion_section_defaults_to_disabled(
+    valid_config_path: Path,
+    tmp_path: Path,
+) -> None:
+    data = yaml.safe_load(valid_config_path.read_text(encoding="utf-8"))
+    del data["fusion"]
+    path = tmp_path / "without-fusion.yaml"
+    path.write_text(yaml.safe_dump(data), encoding="utf-8")
+    config = load_config(path)
+    assert config.fusion.enabled is False
+    assert config.fusion.local_table is None
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("minimum_supporting_records", 0),
+        ("minimum_component_coverage", 1.1),
+        ("maximum_component_overlap_fraction", -0.1),
+    ],
+)
+def test_invalid_fusion_threshold_is_rejected(
+    valid_config_path: Path,
+    tmp_path: Path,
+    field: str,
+    value: int | float,
+) -> None:
+    data = yaml.safe_load(valid_config_path.read_text(encoding="utf-8"))
+    data["fusion"][field] = value
+    path = tmp_path / f"invalid-fusion-{field}.yaml"
+    path.write_text(yaml.safe_dump(data), encoding="utf-8")
+    with pytest.raises(ConfigurationError, match=field):
+        load_config(path)

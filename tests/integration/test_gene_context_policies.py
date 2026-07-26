@@ -38,6 +38,10 @@ def config_copy(
     if profile_table is not None:
         raw["phylogenetic_profile"]["local_table"] = str((fixture_dir / profile_table).resolve())
 
+    fusion_table = raw["fusion"].get("local_table")
+    if fusion_table is not None:
+        raw["fusion"]["local_table"] = str((fixture_dir / fusion_table).resolve())
+
     domain_rules_path = raw["domains"].get("rules_path")
     if domain_rules_path is not None:
         raw["domains"]["rules_path"] = str((fixture_dir / domain_rules_path).resolve())

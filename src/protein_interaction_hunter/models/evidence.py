@@ -2,7 +2,7 @@
 
 from typing import Annotated, Any
 
-from pydantic import Field, StringConstraints
+from pydantic import Field, StringConstraints, model_validator
 
 from protein_interaction_hunter.models.base import StrictModel
 from protein_interaction_hunter.models.enums import (
@@ -199,12 +199,80 @@ class LocalizationEvidence(BaseEvidence):
     )
 
 
+class FusionObservation(BaseEvidence):
+    """One fusion observation using 1-based inclusive component coordinates."""
+
+    query_protein_id: NonEmptyStr
+    candidate_protein_id: NonEmptyStr
+    fusion_protein_id: NonEmptyStr
+    reference_organism: NonEmptyStr
+    query_component_reference_id: NonEmptyStr | None = None
+    candidate_component_reference_id: NonEmptyStr | None = None
+    query_component_start: int = Field(ge=1)
+    query_component_end: int = Field(ge=1)
+    candidate_component_start: int = Field(ge=1)
+    candidate_component_end: int = Field(ge=1)
+    fusion_protein_length: int = Field(ge=1)
+    query_component_coverage: float | None = Field(default=None, ge=0.0, le=1.0)
+    candidate_component_coverage: float | None = Field(default=None, ge=0.0, le=1.0)
+    query_component_identity: float | None = Field(default=None, ge=0.0, le=1.0)
+    candidate_component_identity: float | None = Field(default=None, ge=0.0, le=1.0)
+    evalue_query: float | None = Field(default=None, ge=0.0)
+    evalue_candidate: float | None = Field(default=None, ge=0.0)
+    component_overlap_length: int | None = Field(default=None, ge=0)
+    component_overlap_fraction: float | None = Field(default=None, ge=0.0, le=1.0)
+    source: NonEmptyStr | None = None
+    source_record_id: NonEmptyStr | None = None
+
+    @model_validator(mode="after")
+    def validate_coordinates_and_overlap(self) -> "FusionObservation":
+        if self.query_protein_id == self.candidate_protein_id:
+            raise ValueError("query and candidate protein IDs must differ")
+        if self.query_component_end < self.query_component_start:
+            raise ValueError("query component end must be >= start")
+        if self.candidate_component_end < self.candidate_component_start:
+            raise ValueError("candidate component end must be >= start")
+        if self.query_component_end > self.fusion_protein_length:
+            raise ValueError("query component exceeds fusion protein length")
+        if self.candidate_component_end > self.fusion_protein_length:
+            raise ValueError("candidate component exceeds fusion protein length")
+        query_length = self.query_component_end - self.query_component_start + 1
+        candidate_length = self.candidate_component_end - self.candidate_component_start + 1
+        overlap = max(
+            0,
+            min(self.query_component_end, self.candidate_component_end)
+            - max(self.query_component_start, self.candidate_component_start)
+            + 1,
+        )
+        overlap_fraction = overlap / min(query_length, candidate_length)
+        if self.component_overlap_length is not None and self.component_overlap_length != overlap:
+            raise ValueError("component overlap length is inconsistent with coordinates")
+        if (
+            self.component_overlap_fraction is not None
+            and abs(self.component_overlap_fraction - overlap_fraction) > 1e-12
+        ):
+            raise ValueError("component overlap fraction is inconsistent with coordinates")
+        object.__setattr__(self, "component_overlap_length", overlap)
+        object.__setattr__(self, "component_overlap_fraction", overlap_fraction)
+        return self
+
+
 class FusionEvidence(BaseEvidence):
-    fused_protein_id: NonEmptyStr | None = None
-    reference_id: NonEmptyStr | None = None
-    query_region: tuple[int, int] | None = None
-    candidate_region: tuple[int, int] | None = None
-    taxonomic_support_count: int | None = Field(default=None, ge=0)
+    query_protein_id: NonEmptyStr
+    candidate_protein_id: NonEmptyStr
+    supporting_record_count: int = Field(ge=0)
+    qualifying_record_count: int = Field(ge=0)
+    reference_organisms: list[NonEmptyStr] = Field(default_factory=list)
+    fusion_protein_ids: list[NonEmptyStr] = Field(default_factory=list)
+    best_query_component_coverage: float | None = Field(default=None, ge=0.0, le=1.0)
+    best_candidate_component_coverage: float | None = Field(default=None, ge=0.0, le=1.0)
+    minimum_component_overlap_fraction: float | None = Field(default=None, ge=0.0, le=1.0)
+    pair_supported: bool | None = None
+    support_terms: list[str] = Field(default_factory=list)
+    conflicting_terms: list[str] = Field(default_factory=list)
+    calculation_rule_version: NonEmptyStr | None = None
+    source: NonEmptyStr | None = None
+    source_record_ids: list[NonEmptyStr] = Field(default_factory=list)
 
 
 class KnownInteractionEvidence(BaseEvidence):
