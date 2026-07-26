@@ -836,6 +836,11 @@
     },
     "EvidenceTier": {
       "enum": [
+        "tier_1",
+        "tier_2",
+        "tier_3",
+        "tier_4",
+        "unclassified",
         "tier_a_strong_multi_evidence",
         "tier_b_moderate",
         "tier_c_exploratory",
@@ -845,6 +850,242 @@
       ],
       "title": "EvidenceTier",
       "type": "string"
+    },
+    "EvidenceTierResult": {
+      "additionalProperties": false,
+      "properties": {
+        "applied_tier_caps": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Applied Tier Caps",
+          "type": "array"
+        },
+        "assigned_tier": {
+          "$ref": "#/$defs/EvidenceTier"
+        },
+        "available_weight": {
+          "minimum": 0.0,
+          "title": "Available Weight",
+          "type": "number"
+        },
+        "base_tier": {
+          "$ref": "#/$defs/EvidenceTier"
+        },
+        "calculation_rule_version": {
+          "minLength": 1,
+          "title": "Calculation Rule Version",
+          "type": "string"
+        },
+        "candidate_protein_id": {
+          "minLength": 1,
+          "title": "Candidate Protein Id",
+          "type": "string"
+        },
+        "conflicting_terms": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Conflicting Terms",
+          "type": "array"
+        },
+        "direct_interaction_supported": {
+          "title": "Direct Interaction Supported",
+          "type": "boolean"
+        },
+        "evidence_category_count": {
+          "minimum": 0,
+          "title": "Evidence Category Count",
+          "type": "integer"
+        },
+        "evidence_component_count": {
+          "minimum": 0,
+          "title": "Evidence Component Count",
+          "type": "integer"
+        },
+        "explicit_conflict_present": {
+          "title": "Explicit Conflict Present",
+          "type": "boolean"
+        },
+        "failed_requirements": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Failed Requirements",
+          "type": "array"
+        },
+        "formal_score": {
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Formal Score"
+        },
+        "functional_association_only": {
+          "title": "Functional Association Only",
+          "type": "boolean"
+        },
+        "functional_association_supported": {
+          "title": "Functional Association Supported",
+          "type": "boolean"
+        },
+        "fusion_supported": {
+          "title": "Fusion Supported",
+          "type": "boolean"
+        },
+        "high_specificity_component_count": {
+          "minimum": 0,
+          "title": "High Specificity Component Count",
+          "type": "integer"
+        },
+        "high_specificity_components": {
+          "items": {
+            "type": "string"
+          },
+          "title": "High Specificity Components",
+          "type": "array"
+        },
+        "negative_component_count": {
+          "minimum": 0,
+          "title": "Negative Component Count",
+          "type": "integer"
+        },
+        "neutral_component_count": {
+          "minimum": 0,
+          "title": "Neutral Component Count",
+          "type": "integer"
+        },
+        "origin": {
+          "$ref": "#/$defs/EvidenceOrigin",
+          "default": "inferred"
+        },
+        "orthology_supported": {
+          "title": "Orthology Supported",
+          "type": "boolean"
+        },
+        "phylogenetic_profile_supported": {
+          "title": "Phylogenetic Profile Supported",
+          "type": "boolean"
+        },
+        "physical_interaction_supported": {
+          "title": "Physical Interaction Supported",
+          "type": "boolean"
+        },
+        "positive_component_count": {
+          "minimum": 0,
+          "title": "Positive Component Count",
+          "type": "integer"
+        },
+        "predicted_only": {
+          "title": "Predicted Only",
+          "type": "boolean"
+        },
+        "provenance": {
+          "items": {
+            "$ref": "#/$defs/EvidenceProvenance"
+          },
+          "title": "Provenance",
+          "type": "array"
+        },
+        "quality": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Quality"
+        },
+        "query_protein_id": {
+          "minLength": 1,
+          "title": "Query Protein Id",
+          "type": "string"
+        },
+        "rank": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Rank"
+        },
+        "satisfied_requirements": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Satisfied Requirements",
+          "type": "array"
+        },
+        "status": {
+          "$ref": "#/$defs/EvidenceStatus",
+          "default": "not_run"
+        },
+        "sufficient_evidence": {
+          "title": "Sufficient Evidence",
+          "type": "boolean"
+        },
+        "support_terms": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Support Terms",
+          "type": "array"
+        },
+        "tier_eligible": {
+          "title": "Tier Eligible",
+          "type": "boolean"
+        },
+        "warnings": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "query_protein_id",
+        "candidate_protein_id",
+        "assigned_tier",
+        "base_tier",
+        "tier_eligible",
+        "sufficient_evidence",
+        "evidence_category_count",
+        "evidence_component_count",
+        "available_weight",
+        "positive_component_count",
+        "neutral_component_count",
+        "negative_component_count",
+        "high_specificity_component_count",
+        "direct_interaction_supported",
+        "physical_interaction_supported",
+        "functional_association_supported",
+        "fusion_supported",
+        "orthology_supported",
+        "phylogenetic_profile_supported",
+        "explicit_conflict_present",
+        "predicted_only",
+        "functional_association_only",
+        "calculation_rule_version"
+      ],
+      "title": "EvidenceTierResult",
+      "type": "object"
     },
     "FunctionalEvidence": {
       "additionalProperties": false,
@@ -3358,7 +3599,7 @@
       "type": "string"
     }
   },
-  "$id": "https://schemas.protein-interaction-hunter.local/candidate_evidence_bundle/1.2",
+  "$id": "https://schemas.protein-interaction-hunter.local/candidate_evidence_bundle/1.3",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "properties": {
@@ -3412,6 +3653,13 @@
         }
       ],
       "default": null
+    },
+    "evidence_tiers": {
+      "items": {
+        "$ref": "#/$defs/EvidenceTierResult"
+      },
+      "title": "Evidence Tiers",
+      "type": "array"
     },
     "functional": {
       "items": {

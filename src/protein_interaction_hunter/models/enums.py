@@ -15,6 +15,12 @@ class PredictedRelationshipType(StrEnum):
 
 
 class EvidenceTier(StrEnum):
+    TIER_1 = "tier_1"
+    TIER_2 = "tier_2"
+    TIER_3 = "tier_3"
+    TIER_4 = "tier_4"
+    UNCLASSIFIED = "unclassified"
+    # Legacy values remain parseable for backward-compatible artifact readers.
     TIER_A_STRONG_MULTI_EVIDENCE = "tier_a_strong_multi_evidence"
     TIER_B_MODERATE = "tier_b_moderate"
     TIER_C_EXPLORATORY = "tier_c_exploratory"

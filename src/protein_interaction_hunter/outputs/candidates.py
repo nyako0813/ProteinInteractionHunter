@@ -9,6 +9,7 @@ from typing import Any
 
 from protein_interaction_hunter.models.evidence import (
     DomainEvidence,
+    EvidenceTierResult,
     FunctionalEvidence,
     FusionEvidence,
     GenomeContextEvidence,
@@ -212,6 +213,29 @@ CANDIDATE_COLUMNS = (
     "score_component_phylogenetic_profile",
     "score_component_fusion",
     "score_component_known_interactions",
+    "evidence_tier_status",
+    "evidence_tier",
+    "evidence_tier_base",
+    "evidence_tier_eligible",
+    "evidence_tier_formal_score",
+    "evidence_tier_sufficient_evidence",
+    "evidence_tier_category_count",
+    "evidence_tier_component_count",
+    "evidence_tier_available_weight",
+    "evidence_tier_positive_component_count",
+    "evidence_tier_negative_component_count",
+    "evidence_tier_high_specificity_count",
+    "evidence_tier_high_specificity_components",
+    "evidence_tier_explicit_conflict",
+    "evidence_tier_predicted_only",
+    "evidence_tier_functional_association_only",
+    "evidence_tier_applied_caps",
+    "evidence_tier_satisfied_requirements",
+    "evidence_tier_failed_requirements",
+    "evidence_tier_rule_version",
+    "evidence_tier_support_terms",
+    "evidence_tier_conflicting_terms",
+    "evidence_tier_warnings",
 )
 
 
@@ -289,6 +313,7 @@ class CandidateTableTsvWriter:
         fusion: Mapping[tuple[str, str], FusionEvidence] | None = None,
         known_interactions: Mapping[tuple[str, str], KnownInteractionEvidence] | None = None,
         integrated_scores: Mapping[tuple[str, str], IntegratedScore] | None = None,
+        evidence_tiers: Mapping[tuple[str, str], EvidenceTierResult] | None = None,
     ) -> Path:
         output_path = path.expanduser().resolve()
         output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -307,6 +332,7 @@ class CandidateTableTsvWriter:
         fusion_map = fusion or {}
         known_interactions_map = known_interactions or {}
         integrated_score_map = integrated_scores or {}
+        evidence_tier_map = evidence_tiers or {}
         for candidate in sorted(candidates, key=lambda item: (item.query_id, item.protein_id)):
             pair = (candidate.query_id, candidate.protein_id)
             context = context_map.get(pair)
@@ -319,6 +345,7 @@ class CandidateTableTsvWriter:
             fusion_evidence = fusion_map.get(pair)
             known_interaction = known_interactions_map.get(pair)
             integrated_score = integrated_score_map.get(pair)
+            tier_result = evidence_tier_map.get(pair)
             component_values = (
                 {
                     item.component_name: item.normalized_value
@@ -831,6 +858,67 @@ class CandidateTableTsvWriter:
                     "score_component_known_interactions": _value(
                         component_values.get("known_interactions")
                     ),
+                    "evidence_tier_status": _value(tier_result.status if tier_result else None),
+                    "evidence_tier": _value(tier_result.assigned_tier if tier_result else None),
+                    "evidence_tier_base": _value(tier_result.base_tier if tier_result else None),
+                    "evidence_tier_eligible": _value(
+                        tier_result.tier_eligible if tier_result else None
+                    ),
+                    "evidence_tier_formal_score": _value(
+                        tier_result.formal_score if tier_result else None
+                    ),
+                    "evidence_tier_sufficient_evidence": _value(
+                        tier_result.sufficient_evidence if tier_result else None
+                    ),
+                    "evidence_tier_category_count": _value(
+                        tier_result.evidence_category_count if tier_result else None
+                    ),
+                    "evidence_tier_component_count": _value(
+                        tier_result.evidence_component_count if tier_result else None
+                    ),
+                    "evidence_tier_available_weight": _value(
+                        tier_result.available_weight if tier_result else None
+                    ),
+                    "evidence_tier_positive_component_count": _value(
+                        tier_result.positive_component_count if tier_result else None
+                    ),
+                    "evidence_tier_negative_component_count": _value(
+                        tier_result.negative_component_count if tier_result else None
+                    ),
+                    "evidence_tier_high_specificity_count": _value(
+                        tier_result.high_specificity_component_count if tier_result else None
+                    ),
+                    "evidence_tier_high_specificity_components": (
+                        _list(tier_result.high_specificity_components) if tier_result else ""
+                    ),
+                    "evidence_tier_explicit_conflict": _value(
+                        tier_result.explicit_conflict_present if tier_result else None
+                    ),
+                    "evidence_tier_predicted_only": _value(
+                        tier_result.predicted_only if tier_result else None
+                    ),
+                    "evidence_tier_functional_association_only": _value(
+                        tier_result.functional_association_only if tier_result else None
+                    ),
+                    "evidence_tier_applied_caps": (
+                        _list(tier_result.applied_tier_caps) if tier_result else ""
+                    ),
+                    "evidence_tier_satisfied_requirements": (
+                        _list(tier_result.satisfied_requirements) if tier_result else ""
+                    ),
+                    "evidence_tier_failed_requirements": (
+                        _list(tier_result.failed_requirements) if tier_result else ""
+                    ),
+                    "evidence_tier_rule_version": _value(
+                        tier_result.calculation_rule_version if tier_result else None
+                    ),
+                    "evidence_tier_support_terms": (
+                        _list(tier_result.support_terms) if tier_result else ""
+                    ),
+                    "evidence_tier_conflicting_terms": (
+                        _list(tier_result.conflicting_terms) if tier_result else ""
+                    ),
+                    "evidence_tier_warnings": (_list(tier_result.warnings) if tier_result else ""),
                 }
             )
         output_path.write_text(buffer.getvalue(), encoding="utf-8", newline="\n")

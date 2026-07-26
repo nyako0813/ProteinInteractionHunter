@@ -404,6 +404,40 @@ class IntegratedScore(BaseEvidence):
     calculation_rule_version: NonEmptyStr
 
 
+class EvidenceTierResult(BaseEvidence):
+    query_protein_id: NonEmptyStr
+    candidate_protein_id: NonEmptyStr
+    assigned_tier: EvidenceTier
+    base_tier: EvidenceTier
+    tier_eligible: bool
+    formal_score: float | None = Field(default=None, ge=0.0)
+    rank: int | None = Field(default=None, ge=1)
+    sufficient_evidence: bool
+    evidence_category_count: int = Field(ge=0)
+    evidence_component_count: int = Field(ge=0)
+    available_weight: float = Field(ge=0.0)
+    positive_component_count: int = Field(ge=0)
+    neutral_component_count: int = Field(ge=0)
+    negative_component_count: int = Field(ge=0)
+    high_specificity_component_count: int = Field(ge=0)
+    high_specificity_components: list[str] = Field(default_factory=list)
+    direct_interaction_supported: bool
+    physical_interaction_supported: bool
+    functional_association_supported: bool
+    fusion_supported: bool
+    orthology_supported: bool
+    phylogenetic_profile_supported: bool
+    explicit_conflict_present: bool
+    predicted_only: bool
+    functional_association_only: bool
+    applied_tier_caps: list[str] = Field(default_factory=list)
+    satisfied_requirements: list[str] = Field(default_factory=list)
+    failed_requirements: list[str] = Field(default_factory=list)
+    support_terms: list[str] = Field(default_factory=list)
+    conflicting_terms: list[str] = Field(default_factory=list)
+    calculation_rule_version: NonEmptyStr
+
+
 class ContradictionEvidence(BaseEvidence):
     contradiction_type: NonEmptyStr
     severity: ContradictionSeverity
@@ -433,6 +467,7 @@ class CandidateEvidenceBundle(StrictModel):
     fusion: list[FusionEvidence] = Field(default_factory=list)
     known_interactions: list[KnownInteractionEvidence] = Field(default_factory=list)
     integrated_scoring: list[IntegratedScore] = Field(default_factory=list)
+    evidence_tiers: list[EvidenceTierResult] = Field(default_factory=list)
     contradictions: list[ContradictionEvidence] = Field(default_factory=list)
     score: CandidateScore = Field(default_factory=CandidateScore)
     engine_statuses: dict[str, EvidenceStatus] = Field(default_factory=dict)

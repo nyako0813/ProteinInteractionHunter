@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Literal
 
 import yaml
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from protein_interaction_hunter.exceptions import ConfigurationError
 from protein_interaction_hunter.models.base import StrictModel
@@ -175,6 +175,108 @@ class ScoringConfig(StrictModel):
     penalties: ScoringPenaltiesConfig = Field(default_factory=ScoringPenaltiesConfig)
 
 
+EvidenceTierName = Literal["tier_1", "tier_2", "tier_3", "tier_4", "unclassified"]
+
+
+class EvidenceTierThresholdConfig(StrictModel):
+    minimum_score: float = Field(ge=0.0)
+    minimum_categories: int = Field(ge=0)
+    minimum_components: int = Field(ge=0)
+    minimum_available_weight: float = Field(ge=0.0)
+    require_high_specificity_evidence: bool = False
+    minimum_high_specificity_components: int = Field(default=0, ge=0)
+    maximum_negative_components: int = Field(ge=0)
+
+
+def _tier_1_defaults() -> EvidenceTierThresholdConfig:
+    return EvidenceTierThresholdConfig(
+        minimum_score=75.0,
+        minimum_categories=4,
+        minimum_components=5,
+        minimum_available_weight=3.0,
+        require_high_specificity_evidence=True,
+        minimum_high_specificity_components=1,
+        maximum_negative_components=0,
+    )
+
+
+def _tier_2_defaults() -> EvidenceTierThresholdConfig:
+    return EvidenceTierThresholdConfig(
+        minimum_score=55.0,
+        minimum_categories=3,
+        minimum_components=4,
+        minimum_available_weight=2.0,
+        maximum_negative_components=1,
+    )
+
+
+def _tier_3_defaults() -> EvidenceTierThresholdConfig:
+    return EvidenceTierThresholdConfig(
+        minimum_score=25.0,
+        minimum_categories=2,
+        minimum_components=2,
+        minimum_available_weight=1.0,
+        maximum_negative_components=2,
+    )
+
+
+def _tier_4_defaults() -> EvidenceTierThresholdConfig:
+    return EvidenceTierThresholdConfig(
+        minimum_score=0.0,
+        minimum_categories=2,
+        minimum_components=2,
+        minimum_available_weight=1.0,
+        maximum_negative_components=99,
+    )
+
+
+class EvidenceTiersConfig(StrictModel):
+    enabled: bool = False
+    rule_version: Literal["mvp1l-evidence-tiers-v1"] = "mvp1l-evidence-tiers-v1"
+    tier_1: EvidenceTierThresholdConfig = Field(default_factory=_tier_1_defaults)
+    tier_2: EvidenceTierThresholdConfig = Field(default_factory=_tier_2_defaults)
+    tier_3: EvidenceTierThresholdConfig = Field(default_factory=_tier_3_defaults)
+    tier_4: EvidenceTierThresholdConfig = Field(default_factory=_tier_4_defaults)
+    explicit_conflict_tier_cap: EvidenceTierName = "tier_3"
+    predicted_only_tier_cap: EvidenceTierName = "tier_3"
+    functional_association_only_tier_cap: EvidenceTierName = "tier_3"
+    insufficient_evidence_tier: Literal["unclassified"] = "unclassified"
+
+    @model_validator(mode="after")
+    def validate_tier_order(self) -> "EvidenceTiersConfig":
+        if (
+            not self.tier_1.require_high_specificity_evidence
+            or self.tier_1.minimum_high_specificity_components < 1
+        ):
+            raise ValueError(
+                "tier_1.minimum_high_specificity_components must be >= 1 and "
+                "tier_1.require_high_specificity_evidence must be true"
+            )
+        tiers = [self.tier_1, self.tier_2, self.tier_3, self.tier_4]
+        descending = (
+            "minimum_score",
+            "minimum_categories",
+            "minimum_components",
+            "minimum_available_weight",
+            "minimum_high_specificity_components",
+        )
+        for field_name in descending:
+            values = [getattr(item, field_name) for item in tiers]
+            if values != sorted(values, reverse=True):
+                raise ValueError(f"{field_name} must not become stricter in a lower evidence tier")
+        negatives = [item.maximum_negative_components for item in tiers]
+        if negatives != sorted(negatives):
+            raise ValueError(
+                "maximum_negative_components must not become stricter in a lower evidence tier"
+            )
+        required = [item.require_high_specificity_evidence for item in tiers]
+        if any(not required[index] and required[index + 1] for index in range(3)):
+            raise ValueError(
+                "require_high_specificity_evidence must not become stricter in a lower tier"
+            )
+        return self
+
+
 class StructurePredictionQueueConfig(StrictModel):
     enabled: bool = True
     maximum_entries: int = Field(default=20, ge=1)
@@ -220,12 +322,25 @@ class AppConfig(StrictModel):
     localization: LocalizationConfig
     known_interactions: KnownInteractionsConfig = Field(default_factory=KnownInteractionsConfig)
     scoring: ScoringConfig = Field(default_factory=ScoringConfig)
-    evidence_tiers: EnabledConfig
+    evidence_tiers: EvidenceTiersConfig = Field(default_factory=EvidenceTiersConfig)
     structure_prediction_queue: StructurePredictionQueueConfig
     output: OutputConfig
     cache: CacheConfig
     logging: LoggingConfig
     performance: PerformanceConfig
+
+    @model_validator(mode="after")
+    def validate_evidence_tier_dependency(self) -> "AppConfig":
+        if self.evidence_tiers.enabled and not self.scoring.enabled:
+            raise ValueError("evidence_tiers.enabled=true requires scoring.enabled=true")
+        if self.evidence_tiers.enabled:
+            for tier_name in ("tier_1", "tier_2", "tier_3", "tier_4"):
+                threshold = getattr(self.evidence_tiers, tier_name).minimum_score
+                if threshold > self.scoring.output_scale:
+                    raise ValueError(
+                        f"evidence_tiers.{tier_name}.minimum_score must be <= scoring.output_scale"
+                    )
+        return self
 
 
 def _resolve(path: Path | None, base_directory: Path) -> Path | None:

@@ -6,13 +6,14 @@ model.
 
 | Schema | Version | Unit |
 |---|---|---|
-| Candidate evidence bundle | 1.2 | One query-candidate record per JSONL line |
-| Run manifest | 1.2 | One complete run provenance record |
+| Candidate evidence bundle | 1.3 | One query-candidate record per JSONL line |
+| Run manifest | 1.3 | One complete run provenance record |
 | Structure prediction queue | 1.0 | One manually reviewed pair proposal |
 
-Version 1.2 adds optional MVP-1B gene-context fields and `gene_context_rule_version`. These are
-minor, additive changes; readers that tolerate unknown optional fields remain compatible. The
-candidate TSV is a derived flat view with a fixed column order in `outputs/candidates.py`.
+Version 1.3 adds the MVP-1L evidence-tier result and manifest configuration provenance.
+These are additive changes; the legacy EvidenceTier enum values remain parseable for backward
+compatibility. The candidate TSV is a derived flat view with a fixed column order in
+`outputs/candidates.py`.
 
 ## Gene-context semantics
 

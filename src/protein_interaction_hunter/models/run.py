@@ -60,6 +60,12 @@ class RunManifest(StrictModel):
     known_interactions_rule_version: NonEmptyStr | None = None
     scoring_rule_version: NonEmptyStr | None = None
     scoring_config_snapshot: dict[str, Any] = Field(default_factory=dict)
+    evidence_tier_rule_version: NonEmptyStr | None = None
+    evidence_tier_config_snapshot: dict[str, Any] = Field(default_factory=dict)
+    evidence_tier_thresholds: dict[str, Any] = Field(default_factory=dict)
+    evidence_tier_caps: dict[str, str] = Field(default_factory=dict)
+    evidence_tier_high_specificity_definition_version: NonEmptyStr | None = None
+    evidence_tier_scoring_rule_version_dependency: NonEmptyStr | None = None
     policy_settings: dict[str, str | int | bool] = Field(default_factory=dict)
     parser_warnings: list[str] = Field(default_factory=list)
 

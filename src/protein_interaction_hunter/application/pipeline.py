@@ -38,6 +38,11 @@ from protein_interaction_hunter.application.domain_pairs import (
     build_domain_index,
     evaluate_domain_pairs,
 )
+from protein_interaction_hunter.application.evidence_tiers import (
+    EVIDENCE_TIER_RULE_VERSION,
+    HIGH_SPECIFICITY_DEFINITION_VERSION,
+    evaluate_evidence_tier,
+)
 from protein_interaction_hunter.application.functional_complementarity import (
     FUNCTIONAL_COMPLEMENTARITY_ENGINE_VERSION,
     evaluate_functional_complementarity,
@@ -98,6 +103,7 @@ from protein_interaction_hunter.models.evidence import (
     CandidateEvidenceBundle,
     DomainEvidence,
     EvidenceProvenance,
+    EvidenceTierResult,
     FunctionalEvidence,
     FusionEvidence,
     GenomeContextEvidence,
@@ -120,7 +126,7 @@ from protein_interaction_hunter.outputs.jsonl import (
     JsonRunManifestWriter,
 )
 
-_UNIMPLEMENTED_ENGINES = ("evidence_tiers",)
+_UNIMPLEMENTED_ENGINES: tuple[str, ...] = ()
 
 
 class CandidateGenerationSummary(StrictModel):
@@ -664,15 +670,102 @@ def _excel_scoring_component_rows(
     return rows
 
 
+def _excel_evidence_tier_rows(
+    run_id: str,
+    tiers: dict[tuple[str, str], EvidenceTierResult],
+) -> list[dict[str, object]]:
+    return [
+        {
+            "Run_ID": run_id,
+            "Query_ID": query_id,
+            "Candidate_ID": candidate_id,
+            "Status": result.status,
+            "Assigned_Tier": result.assigned_tier,
+            "Base_Tier": result.base_tier,
+            "Tier_Eligible": result.tier_eligible,
+            "Formal_Score": result.formal_score,
+            "Rank": result.rank,
+            "Sufficient_Evidence": result.sufficient_evidence,
+            "Evidence_Category_Count": result.evidence_category_count,
+            "Evidence_Component_Count": result.evidence_component_count,
+            "Available_Weight": result.available_weight,
+            "Positive_Component_Count": result.positive_component_count,
+            "Neutral_Component_Count": result.neutral_component_count,
+            "Negative_Component_Count": result.negative_component_count,
+            "High_Specificity_Component_Count": result.high_specificity_component_count,
+            "High_Specificity_Components": "|".join(result.high_specificity_components),
+            "Direct_Interaction_Supported": result.direct_interaction_supported,
+            "Physical_Interaction_Supported": result.physical_interaction_supported,
+            "Functional_Association_Supported": result.functional_association_supported,
+            "Fusion_Supported": result.fusion_supported,
+            "Orthology_Supported": result.orthology_supported,
+            "Phylogenetic_Profile_Supported": result.phylogenetic_profile_supported,
+            "Explicit_Conflict_Present": result.explicit_conflict_present,
+            "Predicted_Only": result.predicted_only,
+            "Functional_Association_Only": result.functional_association_only,
+            "Applied_Tier_Caps": "|".join(result.applied_tier_caps),
+            "Satisfied_Requirements": "|".join(result.satisfied_requirements),
+            "Failed_Requirements": "|".join(result.failed_requirements),
+            "Rule_Version": result.calculation_rule_version,
+            "Support_Terms": "|".join(result.support_terms),
+            "Conflicting_Terms": "|".join(result.conflicting_terms),
+            "Warnings": "|".join(result.warnings),
+            "Provenance": "|".join(
+                f"{item.source_name}:{item.source_version or ''}:{item.method or ''}"
+                for item in result.provenance
+            ),
+        }
+        for (query_id, candidate_id), result in sorted(tiers.items())
+    ]
+
+
+def _excel_tier_summary_rows(
+    run_id: str,
+    candidates: list[CandidateProtein],
+    tiers: dict[tuple[str, str], EvidenceTierResult],
+) -> list[dict[str, object]]:
+    if not tiers:
+        return []
+    rows: list[dict[str, object]] = []
+    for query_id in sorted({candidate.query_id for candidate in candidates}):
+        query_candidates = [item for item in candidates if item.query_id == query_id]
+        results = [
+            tiers[(item.query_id, item.protein_id)]
+            for item in query_candidates
+            if (item.query_id, item.protein_id) in tiers
+        ]
+        counts = {
+            name: sum(result.assigned_tier.value == name for result in results)
+            for name in ("tier_1", "tier_2", "tier_3", "tier_4", "unclassified")
+        }
+        rows.append(
+            {
+                "Run_ID": run_id,
+                "Query_ID": query_id,
+                "Tier_1_Count": counts["tier_1"],
+                "Tier_2_Count": counts["tier_2"],
+                "Tier_3_Count": counts["tier_3"],
+                "Tier_4_Count": counts["tier_4"],
+                "Unclassified_Count": counts["unclassified"],
+                "Eligible_Count": sum(result.tier_eligible for result in results),
+                "Total_Candidate_Count": len(query_candidates),
+            }
+        )
+    return rows
+
+
 def _excel_candidate_ranking_rows(
     candidates: list[CandidateProtein],
     scores: dict[tuple[str, str], IntegratedScore],
+    tiers: dict[tuple[str, str], EvidenceTierResult],
 ) -> list[dict[str, object]]:
     rows: list[dict[str, object]] = []
     for candidate in candidates:
         query_id = candidate.query_id
         candidate_id = candidate.protein_id
-        score = scores.get((query_id, candidate_id))
+        pair = (query_id, candidate_id)
+        score = scores.get(pair)
+        tier = tiers.get(pair)
         rows.append(
             {
                 "Rank": score.rank if score else None,
@@ -680,7 +773,7 @@ def _excel_candidate_ranking_rows(
                 "Candidate_ID": candidate_id,
                 "Disposition": candidate.disposition,
                 "Relationship_Type": PredictedRelationshipType.INSUFFICIENT_EVIDENCE,
-                "Evidence_Tier": None,
+                "Evidence_Tier": tier.assigned_tier if tier else None,
                 "Total_Ranking_Score": score.output_score if score else None,
             }
         )
@@ -991,6 +1084,21 @@ class InteractionCandidatePipeline:
                 config.scoring.tie_precision,
             )
 
+        evidence_tiers: dict[tuple[str, str], EvidenceTierResult] = {}
+        if config.evidence_tiers.enabled:
+            for candidate in generated.candidates:
+                pair = (candidate.query_id, candidate.protein_id)
+                evidence_tiers[pair] = evaluate_evidence_tier(
+                    canonical_query_ids[candidate.query_id],
+                    candidate,
+                    integrated_scores.get(pair),
+                    config.evidence_tiers,
+                    known_interactions=known_interaction_evidence.get(pair),
+                    fusion=fusion_evidence.get(pair),
+                    orthology=orthology_evidence.get(pair, []),
+                    phylogenetic_profile=phylogenetic_profile_evidence.get(pair),
+                )
+
         config_hash = build_input_file_manifest(
             "config", resolved_config_path, required=True
         ).sha256
@@ -1019,6 +1127,7 @@ class InteractionCandidatePipeline:
             fusion = fusion_evidence.get(pair)
             known_interaction = known_interaction_evidence.get(pair)
             integrated_score = integrated_scores.get(pair)
+            tier_result = evidence_tiers.get(pair)
 
             statuses = {engine: EvidenceStatus.NOT_RUN for engine in _UNIMPLEMENTED_ENGINES}
             statuses["gene_context"] = context.status if context else EvidenceStatus.NOT_RUN
@@ -1039,6 +1148,9 @@ class InteractionCandidatePipeline:
             statuses["scoring"] = (
                 integrated_score.status if integrated_score else EvidenceStatus.NOT_RUN
             )
+            statuses["evidence_tiers"] = (
+                tier_result.status if tier_result else EvidenceStatus.NOT_RUN
+            )
 
             context_warnings = context.warnings if context else []
             operon_warnings = operon.warnings if operon else []
@@ -1054,6 +1166,7 @@ class InteractionCandidatePipeline:
             fusion_warnings = fusion.warnings if fusion else []
             known_interaction_warnings = known_interaction.warnings if known_interaction else []
             scoring_warnings = integrated_score.warnings if integrated_score else []
+            tier_warnings = tier_result.warnings if tier_result else []
             bundles.append(
                 CandidateEvidenceBundle(
                     domains=domains,
@@ -1064,6 +1177,8 @@ class InteractionCandidatePipeline:
                     fusion=[fusion] if fusion else [],
                     known_interactions=([known_interaction] if known_interaction else []),
                     integrated_scoring=([integrated_score] if integrated_score else []),
+                    evidence_tiers=([tier_result] if tier_result else []),
+                    evidence_tier=(tier_result.assigned_tier if tier_result else None),
                     score=(
                         candidate_score_from_integrated(integrated_score)
                         if integrated_score
@@ -1093,6 +1208,7 @@ class InteractionCandidatePipeline:
                             + fusion_warnings
                             + known_interaction_warnings
                             + scoring_warnings
+                            + tier_warnings
                         )
                     ),
                 )
@@ -1114,6 +1230,7 @@ class InteractionCandidatePipeline:
             fusion=fusion_evidence,
             known_interactions=known_interaction_evidence,
             integrated_scores=integrated_scores,
+            evidence_tiers=evidence_tiers,
         )
         all_warnings = [warning for bundle in bundles for warning in bundle.warnings]
         warning_summary_path = WarningSummaryTsvWriter().write(
@@ -1154,8 +1271,12 @@ class InteractionCandidatePipeline:
                     ),
                     "Integrated_Scoring": _excel_integrated_scoring_rows(run_id, integrated_scores),
                     "Scoring_Components": _excel_scoring_component_rows(run_id, integrated_scores),
+                    "Evidence_Tiers": _excel_evidence_tier_rows(run_id, evidence_tiers),
+                    "Tier_Summary": _excel_tier_summary_rows(
+                        run_id, generated.candidates, evidence_tiers
+                    ),
                     "Candidate_Ranking": _excel_candidate_ranking_rows(
-                        generated.candidates, integrated_scores
+                        generated.candidates, integrated_scores, evidence_tiers
                     ),
                 },
             )
@@ -1232,6 +1353,38 @@ class InteractionCandidatePipeline:
         manifest.scoring_config_snapshot = (
             config.scoring.model_dump(mode="json") if config.scoring.enabled else {}
         )
+        manifest.evidence_tier_rule_version = (
+            EVIDENCE_TIER_RULE_VERSION if config.evidence_tiers.enabled else None
+        )
+        manifest.evidence_tier_config_snapshot = (
+            config.evidence_tiers.model_dump(mode="json") if config.evidence_tiers.enabled else {}
+        )
+        manifest.evidence_tier_thresholds = (
+            {
+                name: getattr(config.evidence_tiers, name).model_dump(mode="json")
+                for name in ("tier_1", "tier_2", "tier_3", "tier_4")
+            }
+            if config.evidence_tiers.enabled
+            else {}
+        )
+        manifest.evidence_tier_caps = (
+            {
+                "explicit_conflict": config.evidence_tiers.explicit_conflict_tier_cap,
+                "predicted_only": config.evidence_tiers.predicted_only_tier_cap,
+                "functional_association_only": (
+                    config.evidence_tiers.functional_association_only_tier_cap
+                ),
+                "insufficient_evidence": config.evidence_tiers.insufficient_evidence_tier,
+            }
+            if config.evidence_tiers.enabled
+            else {}
+        )
+        manifest.evidence_tier_high_specificity_definition_version = (
+            HIGH_SPECIFICITY_DEFINITION_VERSION if config.evidence_tiers.enabled else None
+        )
+        manifest.evidence_tier_scoring_rule_version_dependency = (
+            SCORING_RULE_VERSION if config.evidence_tiers.enabled else None
+        )
 
         if config.gene_context.enabled:
             manifest.policy_settings["operon_proxy_rule_version"] = OPERON_PROXY_RULE_VERSION
@@ -1268,6 +1421,8 @@ class InteractionCandidatePipeline:
             manifest.incomplete_evidence_flags.append("known_interactions_not_run")
         if not config.scoring.enabled:
             manifest.incomplete_evidence_flags.append("scoring_not_run")
+        if not config.evidence_tiers.enabled:
+            manifest.incomplete_evidence_flags.append("evidence_tiers_not_run")
         manifest_path = JsonRunManifestWriter().write(manifest, output_path / "run_manifest.json")
         disposition_counts = {
             disposition: sum(

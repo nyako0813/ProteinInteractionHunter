@@ -2,6 +2,11 @@
   "$defs": {
     "EvidenceTier": {
       "enum": [
+        "tier_1",
+        "tier_2",
+        "tier_3",
+        "tier_4",
+        "unclassified",
         "tier_a_strong_multi_evidence",
         "tier_b_moderate",
         "tier_c_exploratory",
