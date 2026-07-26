@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Any
 
 from protein_interaction_hunter.adapters.local.phylogenetic_profile import (
     LocalPhylogeneticProfileTsvLoader,
@@ -18,7 +19,7 @@ def evaluate(
     query: str,
     candidate: str,
     records: list[PhylogeneticProfileObservation],
-):
+) -> Any:
     return evaluate_phylogenetic_profile_pair(
         query,
         candidate,

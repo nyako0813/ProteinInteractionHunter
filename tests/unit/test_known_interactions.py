@@ -1,3 +1,5 @@
+from typing import Any
+
 from protein_interaction_hunter.application.known_interactions import (
     KNOWN_INTERACTIONS_ENGINE_VERSION,
     build_known_interaction_index,
@@ -32,8 +34,8 @@ def _observation(record_id: str, **updates: object) -> KnownInteractionObservati
 def _evaluate(
     records: list[KnownInteractionObservation],
     **updates: object,
-):
-    options: dict[str, object] = {
+) -> Any:
+    options: Any = {
         "minimum_supporting_records": 1,
         "minimum_direct_records": 1,
         "accepted_interaction_types": [

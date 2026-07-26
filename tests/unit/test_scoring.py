@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
 
 from protein_interaction_hunter.application.scoring import (
@@ -312,7 +314,7 @@ def _rankable(
     query_id: str,
     value: float,
     disposition: CandidateDisposition = CandidateDisposition.INCLUDED,
-):
+) -> Any:
     cfg = config(minimum_evidence_categories=1)
     record = known("direct" if value == 1.0 else "functional")
     score = score_pair(

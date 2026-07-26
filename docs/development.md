@@ -20,11 +20,12 @@ python scripts/validate_schemas.py
 python -m pytest --cov=protein_interaction_hunter --cov-report=term-missing
 ```
 
-Focused MVP-1B checks:
+Focused MVP-1 integration checks:
 
 ```bash
-python -m pytest tests/unit/test_gene_context.py tests/integration/test_candidate_pipeline.py
-protein-interaction-hunter generate-candidates --config tests/fixtures/config.valid.yaml
+python -m pytest tests/integration/test_candidate_pipeline.py
+python -m pytest tests/integration/test_final_integration_audit.py
+protein-interaction-hunter generate-candidates --config tests/fixtures/config.all_engines.yaml
 ```
 
 The gene-context tests must cover adjacency, inclusive overlap, self pairs, transcription-relative

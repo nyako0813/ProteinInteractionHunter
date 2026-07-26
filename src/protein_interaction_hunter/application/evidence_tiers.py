@@ -238,7 +238,6 @@ def evaluate_evidence_tier(
         **empty,
     )
     if ineligible:
-        warning = f"evidence_tier_unclassified:{ineligible}"
         return EvidenceTierResult.model_validate(
             {
                 **common,
@@ -246,7 +245,6 @@ def evaluate_evidence_tier(
                 "base_tier": EvidenceTier.UNCLASSIFIED,
                 "tier_eligible": False,
                 "failed_requirements": [ineligible],
-                "warnings": [warning],
             }
         )
 
@@ -272,7 +270,6 @@ def evaluate_evidence_tier(
                 "tier_eligible": True,
                 "satisfied_requirements": satisfied,
                 "failed_requirements": failed,
-                "warnings": ["evidence_tier_unclassified:no_quantitative_tier_matched"],
             }
         )
 

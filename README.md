@@ -8,26 +8,24 @@ exists and does not replace experimental validation.
 This repository is independent from ProteinHunter. It does not import, depend on, copy source
 from, or modify ProteinHunter_v5.
 
-## Current status: MVP-1B
+## Current status: MVP-1
 
-MVP-1B resolves one or more query identifiers, enumerates every proteome record for each query,
-normalizes GFF3 coordinates, and writes observable gene-context facts for every query-candidate
-pair. It reports same/different contig, interval distance and overlap, coordinate and
-transcription-relative position, strand relationship, intervening representative features,
-feature-index neighborhood membership, contig-edge distances, completeness, status, warnings,
-and provenance.
+MVP-1 resolves query identifiers, enumerates every proteome record for each query, and evaluates
+local gene context, operon proxy, domain, functional-complementarity, localization, orthology,
+phylogenetic-profile, gene-fusion, and known-interaction evidence. Optional integrated scoring,
+per-query dense ranking, and evidence tier classification remain fully auditable through raw
+evidence and component/category breakdowns.
 
-This release does **not** infer operons, conserved neighborhoods, orthologs, functional
-relationships, physical interactions, ranks, scores, Evidence Tiers, or structure results.
-The machine-readable source of truth is the UTF-8 JSONL candidate evidence bundle. TSV and
-Excel are derived views and never replace the JSONL record.
+Scores, ranks, and Evidence Tiers prioritize candidates; they do **not** establish a physical
+interaction and do not replace experimental validation. The machine-readable source of truth is
+the UTF-8 JSONL candidate evidence bundle. TSV and Excel are derived views.
 
 ## Scientific and data policy
 
 - Physical interaction is never asserted from coordinate proximity.
 - AlphaFold 3, AlphaFold Server, ColabFold, and other structure predictors are not run or
   submitted to automatically.
-- No external service or network client is included in MVP-1B; execution is local-only.
+- No external service or network client is enabled in MVP-1; execution is local-only.
 - Private sequences are not transmitted externally.
 - Hypothetical proteins are not excluded solely because they lack annotation.
 - Absence of evidence is not treated as negative evidence.
@@ -59,14 +57,17 @@ protein-interaction-hunter inspect-fixture --config tests/fixtures/config.valid.
 protein-interaction-hunter generate-candidates --config tests/fixtures/config.valid.yaml
 ```
 
-Input paths in YAML are resolved relative to the YAML file. `gene_context.enabled` controls the
-MVP-1B engine, `neighborhood_gene_count` controls the representative-index window, and
-`require_query_coordinates: true` makes missing or ambiguous query coordinates fatal.
+Input paths in YAML are resolved relative to the YAML file. Evidence engines are optional and
+default to disabled when their optional section is omitted. `gene_context.enabled` controls both
+gene-context and operon-proxy evaluation; `scoring.enabled` controls integrated scoring, and
+`evidence_tiers.enabled` requires scoring. `require_query_coordinates: true` makes missing or
+ambiguous query coordinates fatal.
 
 `generate-candidates` writes `candidate_evidence_bundle.jsonl`, `candidate_table.tsv`,
 `ProteinInteractionHunter.xlsx`, `run_manifest.json`, `config.snapshot.yaml`, and
-`warning_summary.tsv` under `output.directory`. It does not calculate or print ranks, scores,
-top candidates, relationship claims, or Evidence Tiers.
+`warning_summary.tsv` under `output.directory`. When enabled, scoring and tier results are
+included in JSONL and TSV and in the `Integrated_Scoring`, `Scoring_Components`,
+`Candidate_Ranking`, `Evidence_Tiers`, and `Tier_Summary` Excel sheets.
 
 ## Coordinate and context rules
 
@@ -128,8 +129,7 @@ See the [detailed design](docs/ProteinInteractionHunter_DESIGN.md),
 
 ## Limitations and roadmap
 
-Later MVP-1 stages will add operon proxies, functional rules, transparent scoring traces,
-contradictions, and a manual structure-prediction queue. MVP-2 will add optional orthology,
-phylogenetic-profile, conserved-neighborhood, and fusion evidence. MVP-3 will isolate optional
-external evidence behind adapters. Structure-result import will remain separate from the
-initial non-structural ranking.
+MVP-1 remains a local evidence-prioritization workflow. It does not submit structures,
+retrieve network evidence, infer circular-origin wrapping, or replace manual review and
+experimental validation. Future work may add isolated external adapters and structure-result
+import without changing the meaning of current raw evidence.

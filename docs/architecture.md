@@ -18,14 +18,14 @@ resolve queries, enumerate candidates, normalize GFF coordinates, and calculate 
 gene context. Ports describe capabilities. Local adapters parse input files, while output
 adapters serialize already-validated models.
 
-## MVP-1B pipeline
+## MVP-1 pipeline
 
 ```text
-config + FASTA + GFF3 + optional annotation
-  → identifier index and query resolution
-  → all query-candidate pairs
-  → normalized representative-feature index per contig
-  → gene-context evidence per pair
+config + local FASTA/GFF/annotation/evidence tables
+  → identifier index and all query-candidate pairs
+  → independent raw evidence engines
+  → category-capped integrated scoring and per-query ranking (optional)
+  → evidence tier classification (optional; requires scoring)
   → canonical JSONL + derived TSV/Excel + manifest/warnings
 ```
 
@@ -41,12 +41,13 @@ Unmapped gene/RNA units remain observable representatives, preventing gene/CDS d
 while preserving non-protein features for `intervening_feature_count`. Features are sorted by
 `(start, end, representative_id)` for deterministic indices.
 
-## Gene-context boundary
+## Evidence boundaries
 
-MVP-1B reports coordinate facts only. It does not infer an operon, conserved neighborhood,
-ortholog, functional relationship, physical interaction, rank, score, or Evidence Tier.
-`gene_context` is available, missing, failed, not applicable, or not run independently for each
-pair. All other evidence engines remain `not_run`; every score and tier remains `None`.
+Each engine reports available, missing, failed, not applicable, or not run independently.
+Disabled or unavailable evidence is excluded from the scoring denominator and is never converted
+to negative evidence. Operon is an explicit proxy, gene fusion is association evidence rather
+than proof of direct physical interaction, and Evidence Tier is a prioritization label rather
+than experimental confirmation.
 
 Linear contigs only are supported. Circular origin wrapping is not inferred. Contig lengths
 come only from `##sequence-region`; when absent, edge distances are null and completeness is
@@ -55,15 +56,15 @@ come only from `##sequence-region`; when absent, edge distances are null and com
 
 ## Boundaries
 
-- External services are isolated behind ports and have no MVP-1B implementation.
+- External services remain isolated behind ports and are not enabled by MVP-1.
 - JSONL is the canonical machine-readable evidence bundle.
 - TSV and Excel are derived views for inspection.
 - Parser or coordinate ambiguity is explicit; unavailable evidence is never converted to zero.
 - Local-only operation is the default and no network dependency is installed.
 - ProteinHunter_v5 is neither imported nor modified.
 
-## Unimplemented engines
+## Current engine scope
 
-Operon inference, orthology, phylogenetic profiles, conserved-neighborhood analysis, domain
-analysis, functional complementarity, localization prediction, fusion analysis, known
-interaction retrieval, scoring, tiers, and ranking remain outside MVP-1B.
+All configured MVP-1 local evidence, scoring, ranking, and tier engines are implemented.
+`_UNIMPLEMENTED_ENGINES` is empty. Conserved-neighborhood analysis, network retrieval, and
+automatic structure prediction remain outside the current local pipeline.

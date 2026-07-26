@@ -1,6 +1,7 @@
 """MVP-1B coordinate normalization and gene-context semantics."""
 
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -54,7 +55,7 @@ def index_for(
     protein_ids: list[str],
     *,
     with_region: bool = True,
-):
+) -> Any:
     regions = {"c": SequenceRegion(seqid="c", start=1, end=1000)} if with_region else {}
     return build_coordinate_index(
         [ProteinRecord(protein_id=value, sequence="MSTK") for value in protein_ids],
@@ -62,7 +63,7 @@ def index_for(
     )
 
 
-def fixture_context(fixture_dir: Path, candidate_id: str):
+def fixture_context(fixture_dir: Path, candidate_id: str) -> Any:
     proteins = LocalFastaLoader().load(fixture_dir / "synthetic_proteome.fasta")
     document = LocalGff3Loader().load_document(fixture_dir / "synthetic_genome.gff3")
     return calculate_gene_context(

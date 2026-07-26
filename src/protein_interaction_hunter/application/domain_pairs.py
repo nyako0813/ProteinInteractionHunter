@@ -106,69 +106,78 @@ def evaluate_domain_pairs(
     evidence_records: list[DomainEvidence] = []
 
     for pair_rule in ruleset.pair_rules:
-        query_accessions = roles.get(pair_rule.query_role, set())
-        candidate_accessions = roles.get(
-            pair_rule.candidate_role,
-            set(),
-        )
+        orientations = [
+            (pair_rule.query_role, pair_rule.candidate_role),
+        ]
+        if pair_rule.query_role != pair_rule.candidate_role:
+            orientations.append(
+                (pair_rule.candidate_role, pair_rule.query_role)
+            )
 
-        for query_domain in query_domains:
-            if query_domain.accession not in query_accessions:
-                continue
+        for query_role, candidate_role in orientations:
+            query_accessions = roles.get(query_role, set())
+            candidate_accessions = roles.get(
+                candidate_role,
+                set(),
+            )
 
-            for candidate_domain in candidate_domains:
-                if candidate_domain.accession not in candidate_accessions:
+            for query_domain in query_domains:
+                if query_domain.accession not in query_accessions:
                     continue
 
-                is_shared = (
-                    query_domain.accession
-                    == candidate_domain.accession
-                )
+                for candidate_domain in candidate_domains:
+                    if candidate_domain.accession not in candidate_accessions:
+                        continue
 
-                if is_shared and not pair_rule.allow_shared_accession:
-                    continue
-
-                evidence_records.append(
-                    DomainEvidence(
-                        status=EvidenceStatus.AVAILABLE,
-                        origin=EvidenceOrigin.ANNOTATION,
-                        calculation_rule_version=(
-                            DOMAIN_PAIR_ENGINE_VERSION
-                        ),
-                        protein_id=candidate_protein_id,
-                        source=candidate_domain.source,
-                        accession=candidate_domain.accession,
-                        name=candidate_domain.name,
-                        start=candidate_domain.start,
-                        end=candidate_domain.end,
-                        architecture_index=(
-                            candidate_domain.architecture_index
-                        ),
-                        role=pair_rule.candidate_role,
-                        pair_rule_id=pair_rule.rule_id,
-                        paired_protein_id=query_protein_id,
-                        paired_accession=query_domain.accession,
-                        is_shared=is_shared,
-                        pair_matched=True,
-                        support_terms=sorted(
-                            set(
-                                pair_rule.support_terms
-                                + [
-                                    f"query:{query_domain.accession}",
-                                    (
-                                        "candidate:"
-                                        f"{candidate_domain.accession}"
-                                    ),
-                                ]
-                            )
-                        ),
-                        conflicting_terms=sorted(
-                            set(pair_rule.conflicting_terms)
-                        ),
-                        ruleset_path=serialized_path,
-                        provenance=provenance,
+                    is_shared = (
+                        query_domain.accession
+                        == candidate_domain.accession
                     )
-                )
+
+                    if is_shared and not pair_rule.allow_shared_accession:
+                        continue
+
+                    evidence_records.append(
+                        DomainEvidence(
+                            status=EvidenceStatus.AVAILABLE,
+                            origin=EvidenceOrigin.ANNOTATION,
+                            calculation_rule_version=(
+                                DOMAIN_PAIR_ENGINE_VERSION
+                            ),
+                            protein_id=candidate_protein_id,
+                            source=candidate_domain.source,
+                            accession=candidate_domain.accession,
+                            name=candidate_domain.name,
+                            start=candidate_domain.start,
+                            end=candidate_domain.end,
+                            architecture_index=(
+                                candidate_domain.architecture_index
+                            ),
+                            role=candidate_role,
+                            pair_rule_id=pair_rule.rule_id,
+                            paired_protein_id=query_protein_id,
+                            paired_accession=query_domain.accession,
+                            is_shared=is_shared,
+                            pair_matched=True,
+                            support_terms=sorted(
+                                set(
+                                    pair_rule.support_terms
+                                    + [
+                                        f"query:{query_domain.accession}",
+                                        (
+                                            "candidate:"
+                                            f"{candidate_domain.accession}"
+                                        ),
+                                    ]
+                                )
+                            ),
+                            conflicting_terms=sorted(
+                                set(pair_rule.conflicting_terms)
+                            ),
+                            ruleset_path=serialized_path,
+                            provenance=provenance,
+                        )
+                    )
 
     if evidence_records:
         return evidence_records

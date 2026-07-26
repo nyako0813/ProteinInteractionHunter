@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Any
 
 from protein_interaction_hunter.adapters.local.domain_rules import (
     LocalDomainRulesLoader,
@@ -13,7 +14,7 @@ from protein_interaction_hunter.application.domain_pairs import (
 from protein_interaction_hunter.models.enums import EvidenceStatus
 
 
-def load_inputs(fixture_dir: Path):
+def load_inputs(fixture_dir: Path) -> Any:
     domain_records = LocalDomainTsvLoader().load(
         fixture_dir / "synthetic_domains.tsv"
     )

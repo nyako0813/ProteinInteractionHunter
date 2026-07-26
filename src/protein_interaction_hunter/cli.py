@@ -1,4 +1,4 @@
-"""Validation-only MVP-0 command line interface."""
+"""Local validation and MVP-1 evidence-prioritization command line interface."""
 
 from pathlib import Path
 from typing import Annotated
@@ -13,7 +13,7 @@ from protein_interaction_hunter.exceptions import ProteinInteractionHunterError
 
 app = typer.Typer(
     name="protein-interaction-hunter",
-    help="Validate inputs and generate local-only MVP-1B gene-context records.",
+    help="Validate local inputs and generate auditable MVP-1 evidence, scores, ranks, and tiers.",
     no_args_is_help=True,
 )
 
@@ -31,7 +31,7 @@ def main(
         typer.Option("--version", callback=_version_callback, is_eager=True),
     ] = None,
 ) -> None:
-    """MVP-0 validation commands; biological analysis is not implemented."""
+    """Validate inputs and run the local-only evidence-prioritization pipeline."""
 
 
 def _fail(exc: Exception) -> None:
@@ -100,7 +100,7 @@ def inspect_fixture_command(
 def generate_candidates_command(
     config: Annotated[Path, typer.Option("--config", exists=True, dir_okay=False)],
 ) -> None:
-    """Generate all query-protein pairs with optional scoring; tiers remain unset."""
+    """Generate all query-protein pairs with optional evidence, scoring, and tiers."""
     try:
         result = InteractionCandidatePipeline().run(
             config,

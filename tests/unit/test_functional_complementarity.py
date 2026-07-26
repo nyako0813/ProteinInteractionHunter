@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Any
 
 from protein_interaction_hunter.adapters.local.functional_rules import (
     LocalFunctionalRulesLoader,
@@ -13,7 +14,7 @@ from protein_interaction_hunter.models.enums import (
 )
 
 
-def load_rules(fixture_dir: Path):
+def load_rules(fixture_dir: Path) -> Any:
     path = (
         fixture_dir
         / "rules"

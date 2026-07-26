@@ -1,6 +1,7 @@
 """MVP-1A candidate generation and policy behavior."""
 
 from pathlib import Path
+from typing import Any
 
 from protein_interaction_hunter.adapters.local.annotation import LocalAnnotationTsvLoader
 from protein_interaction_hunter.adapters.local.fasta import LocalFastaLoader
@@ -13,7 +14,7 @@ from protein_interaction_hunter.config import CandidateGenerationConfig
 from protein_interaction_hunter.models import CandidateDisposition, EvidenceStatus, ProteinRecord
 
 
-def generate(fixture_dir: Path, query_ids: list[str] | None = None, **updates: object):
+def generate(fixture_dir: Path, query_ids: list[str] | None = None, **updates: object) -> Any:
     policy = CandidateGenerationConfig().model_copy(update=updates)
     return generate_candidates(
         proteins=LocalFastaLoader().load(fixture_dir / "synthetic_proteome.fasta"),
@@ -24,7 +25,7 @@ def generate(fixture_dir: Path, query_ids: list[str] | None = None, **updates: o
     )
 
 
-def by_id(result, protein_id: str):
+def by_id(result: Any, protein_id: str) -> Any:
     return next(candidate for candidate in result.candidates if candidate.protein_id == protein_id)
 
 

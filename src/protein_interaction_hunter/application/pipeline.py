@@ -787,9 +787,7 @@ class InteractionCandidatePipeline:
         self, config_path: Path | None = None, command_line: list[str] | None = None
     ) -> PipelineResult:
         if config_path is None:
-            raise NotImplementedError(
-                "Candidate ranking is not implemented in MVP-0; a config path is required."
-            )
+            raise ValueError("A config path is required to run the candidate pipeline.")
         resolved_config_path = config_path.expanduser().resolve()
         config = load_config(resolved_config_path)
         proteins = LocalFastaLoader().load(config.input.proteome_fasta)

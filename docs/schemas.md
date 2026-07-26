@@ -49,9 +49,10 @@ was unavailable. `failed` includes ambiguous coordinate mapping. `not_applicable
 different contigs, and `not_run` for disabled/unimplemented engines. Missing evidence is not
 negative evidence.
 
-Scores are optional floats from 0.0 to 1.0. `None` means not calculated or unavailable; `0.0`
-means a calculation produced zero. MVP-1B does not calculate any score, rank, relationship
-claim, or Evidence Tier.
+Backward-compatible candidate summary scores are optional floats from 0.0 to 1.0. `None`
+means not calculated or unavailable; `0.0` is a calculated zero. The integrated scoring record
+also stores its configured output scale, component/category breakdown, sufficiency, and rank.
+Evidence tiers are optional prioritization labels and are not interaction claims.
 
 ## Compatibility
 
@@ -59,4 +60,4 @@ claim, or Evidence Tier.
 - Minor: backward-compatible optional fields or enum additions documented for tolerant readers.
 - Major: removed/renamed required fields, changed meaning/type, or other breaking changes.
 
-No migration engine is included in MVP-1B.
+No automatic schema migration engine is included.

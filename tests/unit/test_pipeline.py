@@ -6,5 +6,5 @@ from protein_interaction_hunter.application.pipeline import InteractionCandidate
 
 
 def test_pipeline_does_not_fake_mvp0_success() -> None:
-    with pytest.raises(NotImplementedError, match="not implemented in MVP-0"):
+    with pytest.raises(ValueError, match="config path is required"):
         InteractionCandidatePipeline().run()

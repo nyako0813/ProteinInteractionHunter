@@ -1,3 +1,5 @@
+from typing import Any
+
 from protein_interaction_hunter.application.fusion import (
     FUSION_ENGINE_VERSION,
     build_fusion_index,
@@ -46,7 +48,7 @@ def evaluate(
     minimum_records: int = 1,
     coverage: float = 0.6,
     overlap: float = 0.2,
-):
+) -> Any:
     return evaluate_fusion_pair(
         query,
         candidate,
