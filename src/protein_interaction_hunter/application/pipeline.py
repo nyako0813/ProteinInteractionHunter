@@ -1288,6 +1288,22 @@ class InteractionCandidatePipeline:
                     "annotation_table", config.input.annotation_table, required=False
                 )
             )
+        if config.domains.local_table is not None:
+            input_files.append(
+                build_input_file_manifest(
+                    "domain_local_table",
+                    config.domains.local_table,
+                    required=config.domains.enabled,
+                )
+            )
+        if config.domains.rules_path is not None:
+            input_files.append(
+                build_input_file_manifest(
+                    "domain_pair_rules",
+                    config.domains.rules_path,
+                    required=config.domains.enabled,
+                )
+            )
         if config.orthology.enabled and config.orthology.local_table is not None:
             input_files.append(
                 build_input_file_manifest(

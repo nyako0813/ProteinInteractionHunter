@@ -54,6 +54,10 @@ def test_combined_input_summary_and_query_existence(valid_config_path: Path) -> 
     assert summary.query_count == 1
     assert summary.gff_coordinate_count == 11
     assert summary.annotation_count == 11
+    assert summary.domain_annotation_count == 5
+    assert summary.domain_protein_count == 5
+    assert summary.unknown_domain_id_count == 0
+    assert summary.query_domain_annotation_count == 1
     assert summary.duplicate_sequence_group_count == 1
     assert summary.missing_coordinate_count == 2
     assert summary.hypothetical_protein_count == 1

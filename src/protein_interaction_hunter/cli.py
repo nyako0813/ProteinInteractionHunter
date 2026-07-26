@@ -70,7 +70,11 @@ def validate_inputs_command(
         f"proteins={summary.protein_count}, coordinates={summary.gff_coordinate_count}, "
         f"identifier_matches={summary.identifier_match_count}, "
         f"duplicates={summary.duplicate_sequence_group_count}, "
-        f"missing_coordinates={summary.missing_coordinate_count}"
+        f"missing_coordinates={summary.missing_coordinate_count}, "
+        f"domains={summary.domain_annotation_count}, "
+        f"domain_proteins={summary.domain_protein_count}, "
+        f"unknown_domain_ids={summary.unknown_domain_id_count}, "
+        f"query_domains={summary.query_domain_annotation_count}"
     )
 
 
@@ -89,6 +93,8 @@ def inspect_fixture_command(
         ("query_count", summary.query_count),
         ("gff_coordinate_count", summary.gff_coordinate_count),
         ("annotation_count", summary.annotation_count),
+        ("domain_annotation_count", summary.domain_annotation_count),
+        ("domain_protein_count", summary.domain_protein_count),
         ("duplicate_sequence_group_count", summary.duplicate_sequence_group_count),
         ("missing_coordinate_count", summary.missing_coordinate_count),
         ("hypothetical_protein_count", summary.hypothetical_protein_count),

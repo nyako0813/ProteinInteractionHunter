@@ -3,6 +3,7 @@
 from pydantic import Field
 
 from protein_interaction_hunter.adapters.local.annotation import LocalAnnotationTsvLoader
+from protein_interaction_hunter.adapters.local.domains import LocalDomainTsvLoader
 from protein_interaction_hunter.adapters.local.fasta import (
     LocalFastaLoader,
     duplicate_sequence_groups,
@@ -20,6 +21,10 @@ class InputValidationSummary(StrictModel):
     gff_feature_count: int = Field(ge=0)
     gff_coordinate_count: int = Field(ge=0)
     annotation_count: int = Field(ge=0)
+    domain_annotation_count: int = Field(ge=0)
+    domain_protein_count: int = Field(ge=0)
+    unknown_domain_id_count: int = Field(ge=0)
+    query_domain_annotation_count: int = Field(ge=0)
     identifier_match_count: int = Field(ge=0)
     duplicate_sequence_group_count: int = Field(ge=0)
     missing_coordinate_count: int = Field(ge=0)
@@ -46,6 +51,11 @@ def validate_local_inputs(config: AppConfig) -> InputValidationSummary:
     if config.input.annotation_table is not None:
         annotations = LocalAnnotationTsvLoader().load(config.input.annotation_table)
 
+    domain_records = []
+    if config.domains.local_table is not None:
+        domain_records = LocalDomainTsvLoader().load(config.domains.local_table)
+    domain_ids = {record.protein_id for record in domain_records}
+
     annotation_by_id = {record.protein_id: record for record in annotations}
     hypothetical_count = 0
     for protein in proteins:
@@ -64,9 +74,10 @@ def validate_local_inputs(config: AppConfig) -> InputValidationSummary:
     warnings: list[str] = []
     unknown_annotation_ids = sorted(set(annotation_by_id) - protein_ids)
     if unknown_annotation_ids:
-        warnings.append(
-            "Annotation IDs absent from proteome: " + ", ".join(unknown_annotation_ids)
-        )
+        warnings.append("Annotation IDs absent from proteome: " + ", ".join(unknown_annotation_ids))
+    unknown_domain_ids = sorted(domain_ids - protein_ids)
+    if unknown_domain_ids:
+        warnings.append("Domain IDs absent from proteome: " + ", ".join(unknown_domain_ids))
 
     return InputValidationSummary(
         protein_count=len(proteins),
@@ -74,6 +85,12 @@ def validate_local_inputs(config: AppConfig) -> InputValidationSummary:
         gff_feature_count=len(document.features),
         gff_coordinate_count=len(coordinate_index.by_protein),
         annotation_count=len(annotations),
+        domain_annotation_count=len(domain_records),
+        domain_protein_count=len(domain_ids & protein_ids),
+        unknown_domain_id_count=len(domain_ids - protein_ids),
+        query_domain_annotation_count=sum(
+            record.protein_id in config.query.protein_ids for record in domain_records
+        ),
         identifier_match_count=len(matched_ids),
         duplicate_sequence_group_count=len(duplicate_sequence_groups(proteins)),
         missing_coordinate_count=len(missing_coordinates),

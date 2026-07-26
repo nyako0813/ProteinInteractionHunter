@@ -261,6 +261,10 @@ def test_candidate_tsv_header_and_manifest_provenance(
     assert "orthology_local_table" in input_files_by_name
     assert input_files_by_name["orthology_local_table"].required is True
     assert input_files_by_name["orthology_local_table"].sha256
+    assert input_files_by_name["domain_local_table"].required is True
+    assert input_files_by_name["domain_local_table"].sha256
+    assert input_files_by_name["domain_pair_rules"].required is True
+    assert input_files_by_name["domain_pair_rules"].sha256
     assert manifest.package_version == "0.1.0"
     assert manifest.git_commit
     assert manifest.normalization_rule_version == NORMALIZATION_RULE_VERSION
