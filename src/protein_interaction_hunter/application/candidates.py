@@ -100,6 +100,9 @@ def _mapped_coordinates(
         selected[key] = primary.model_copy(
             update={"old_locus_tag": old_locus_tag, "locus_tag": locus_tag}
         )
+    # A direct or otherwise unique coordinate mapping takes precedence over
+    # ambiguity introduced only by a different record's colliding alias.
+    ambiguous.difference_update(selected)
     return selected, ambiguous
 
 

@@ -11,7 +11,14 @@ from protein_interaction_hunter.application.candidates import (
     generate_candidates,
 )
 from protein_interaction_hunter.config import CandidateGenerationConfig
-from protein_interaction_hunter.models import CandidateDisposition, EvidenceStatus, ProteinRecord
+from protein_interaction_hunter.models import (
+    AnnotationRecord,
+    CandidateDisposition,
+    EvidenceStatus,
+    GeneCoordinate,
+    IdentifierMatchStatus,
+    ProteinRecord,
+)
 
 
 def generate(fixture_dir: Path, query_ids: list[str] | None = None, **updates: object) -> Any:
@@ -100,3 +107,87 @@ def test_duplicate_group_does_not_merge_distinct_proteins() -> None:
     ]
     groups = build_duplicate_groups(records)
     assert list(groups.values()) == [["A", "B"]]
+
+
+def test_ambiguous_annotation_alias_does_not_override_exact_gff_mapping() -> None:
+    proteins = [
+        ProteinRecord(protein_id="Q", sequence="MSTKAA"),
+        ProteinRecord(protein_id="C", sequence="MSTKCC"),
+    ]
+    coordinates = [
+        GeneCoordinate(
+            seqid="c",
+            feature_type="gene",
+            start=10,
+            end=30,
+            strand="+",
+            feature_id="gene-q",
+            locus_tag="LQ",
+        ),
+        GeneCoordinate(
+            seqid="c",
+            feature_type="CDS",
+            start=10,
+            end=30,
+            strand="+",
+            feature_id="cds-q",
+            parent_id="gene-q",
+            parent_ids=["gene-q"],
+            protein_id="Q",
+            locus_tag="LQ",
+        ),
+        GeneCoordinate(
+            seqid="c",
+            feature_type="gene",
+            start=100,
+            end=120,
+            strand="+",
+            feature_id="gene-c",
+            locus_tag="LC",
+        ),
+        GeneCoordinate(
+            seqid="c",
+            feature_type="CDS",
+            start=100,
+            end=120,
+            strand="+",
+            feature_id="cds-c",
+            parent_id="gene-c",
+            parent_ids=["gene-c"],
+            protein_id="C",
+            locus_tag="LC",
+        ),
+    ]
+    annotations = [
+        AnnotationRecord(
+            protein_id="Q",
+            gene_name="gene-c",
+            locus_tag="LQ",
+            product="query",
+            status=EvidenceStatus.AVAILABLE,
+        ),
+        AnnotationRecord(
+            protein_id="C",
+            gene_name="gene-q",
+            locus_tag="LC",
+            product="candidate",
+            status=EvidenceStatus.AVAILABLE,
+        ),
+    ]
+
+    result = generate_candidates(
+        proteins=proteins,
+        coordinates=coordinates,
+        annotations=annotations,
+        query_ids=["Q"],
+        policy=CandidateGenerationConfig(),
+    )
+
+    assert result.ambiguous_mapping_count == 0
+    assert all(
+        candidate.identifier_match_status is IdentifierMatchStatus.EXACT_MATCH
+        for candidate in result.candidates
+    )
+    assert all(
+        "ambiguous_identifier_mapping" not in candidate.warnings for candidate in result.candidates
+    )
