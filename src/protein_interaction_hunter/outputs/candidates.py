@@ -14,6 +14,7 @@ from protein_interaction_hunter.models.evidence import (
     LocalizationEvidence,
     OperonEvidence,
     OrthologRecord,
+    PhylogeneticProfileEvidence,
 )
 from protein_interaction_hunter.models.protein import CandidateProtein
 
@@ -133,6 +134,19 @@ CANDIDATE_COLUMNS = (
     "orthology_source",
     "orthology_source_record_id",
     "orthology_warnings",
+    "phylogenetic_profile_status",
+    "phylogenetic_profile_informative_species",
+    "phylogenetic_profile_shared_presence",
+    "phylogenetic_profile_shared_absence",
+    "phylogenetic_profile_discordant",
+    "phylogenetic_profile_unknown",
+    "phylogenetic_profile_similarity",
+    "phylogenetic_profile_pair_supported",
+    "phylogenetic_profile_support_terms",
+    "phylogenetic_profile_conflicting_terms",
+    "phylogenetic_profile_rule_version",
+    "phylogenetic_profile_source",
+    "phylogenetic_profile_warnings",
 )
 
 
@@ -202,6 +216,11 @@ class CandidateTableTsvWriter:
             Sequence[OrthologRecord],
         ]
         | None = None,
+        phylogenetic_profile: Mapping[
+            tuple[str, str],
+            PhylogeneticProfileEvidence,
+        ]
+        | None = None,
     ) -> Path:
         output_path = path.expanduser().resolve()
         output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -216,6 +235,7 @@ class CandidateTableTsvWriter:
         localization_map = localization or {}
         functional_map = functional or {}
         orthology_map = orthology or {}
+        phylogenetic_profile_map = phylogenetic_profile or {}
         for candidate in sorted(candidates, key=lambda item: (item.query_id, item.protein_id)):
             pair = (candidate.query_id, candidate.protein_id)
             context = context_map.get(pair)
@@ -224,6 +244,7 @@ class CandidateTableTsvWriter:
             localization_record = localization_map.get(pair)
             functional_records = functional_map.get(pair, ())
             orthology_records = orthology_map.get(pair, ())
+            profile = phylogenetic_profile_map.get(pair)
             writer.writerow(
                 {
                     "run_id": run_id,
@@ -521,6 +542,39 @@ class CandidateTableTsvWriter:
                         orthology_records,
                         "warnings",
                     ),
+                    "phylogenetic_profile_status": _value(profile.status if profile else None),
+                    "phylogenetic_profile_informative_species": _value(
+                        profile.informative_species_count if profile else None
+                    ),
+                    "phylogenetic_profile_shared_presence": _value(
+                        profile.shared_presence_count if profile else None
+                    ),
+                    "phylogenetic_profile_shared_absence": _value(
+                        profile.shared_absence_count if profile else None
+                    ),
+                    "phylogenetic_profile_discordant": _value(
+                        profile.discordant_count if profile else None
+                    ),
+                    "phylogenetic_profile_unknown": _value(
+                        profile.unknown_count if profile else None
+                    ),
+                    "phylogenetic_profile_similarity": _value(
+                        profile.profile_similarity if profile else None
+                    ),
+                    "phylogenetic_profile_pair_supported": _value(
+                        profile.pair_supported if profile else None
+                    ),
+                    "phylogenetic_profile_support_terms": (
+                        _list(profile.support_terms) if profile else ""
+                    ),
+                    "phylogenetic_profile_conflicting_terms": (
+                        _list(profile.conflicting_terms) if profile else ""
+                    ),
+                    "phylogenetic_profile_rule_version": _value(
+                        profile.calculation_rule_version if profile else None
+                    ),
+                    "phylogenetic_profile_source": _value(profile.source if profile else None),
+                    "phylogenetic_profile_warnings": (_list(profile.warnings) if profile else ""),
                 }
             )
         output_path.write_text(buffer.getvalue(), encoding="utf-8", newline="\n")

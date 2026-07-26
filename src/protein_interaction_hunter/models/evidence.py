@@ -124,10 +124,20 @@ class OrthologRecord(BaseEvidence):
 
 
 class PhylogeneticProfileEvidence(BaseEvidence):
-    informative_taxa: int | None = Field(default=None, ge=0)
-    missing_rate: float | None = Field(default=None, ge=0.0, le=1.0)
-    raw_similarity: float | None = Field(default=None, ge=-1.0, le=1.0)
-    corrected_similarity: float | None = Field(default=None, ge=-1.0, le=1.0)
+    query_protein_id: NonEmptyStr
+    candidate_protein_id: NonEmptyStr
+    informative_species_count: int | None = Field(default=None, ge=0)
+    shared_presence_count: int | None = Field(default=None, ge=0)
+    shared_absence_count: int | None = Field(default=None, ge=0)
+    discordant_count: int | None = Field(default=None, ge=0)
+    unknown_count: int | None = Field(default=None, ge=0)
+    profile_similarity: float | None = Field(default=None, ge=0.0, le=1.0)
+    pair_supported: bool | None = None
+    support_terms: list[str] = Field(default_factory=list)
+    conflicting_terms: list[str] = Field(default_factory=list)
+    calculation_rule_version: NonEmptyStr | None = None
+    source: NonEmptyStr | None = None
+    source_record_id: NonEmptyStr | None = None
 
 
 class DomainEvidence(BaseEvidence):

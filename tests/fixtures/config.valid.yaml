@@ -30,7 +30,12 @@ orthology:
   database:
   local_table: synthetic_orthology.tsv
 phylogenetic_profile:
-  enabled: false
+  enabled: true
+  source: local_table
+  local_table: synthetic_phylogenetic_profiles.tsv
+  minimum_shared_species: 2
+  minimum_informative_species: 3
+  minimum_profile_similarity: 0.8
 domains:
   enabled: true
   source: local_table

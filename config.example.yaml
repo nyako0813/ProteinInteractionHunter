@@ -36,6 +36,11 @@ orthology:
 
 phylogenetic_profile:
   enabled: false
+  source: local_table
+  local_table: null
+  minimum_shared_species: 2
+  minimum_informative_species: 3
+  minimum_profile_similarity: 0.8
 
 domains:
   enabled: false

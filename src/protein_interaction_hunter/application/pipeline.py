@@ -25,6 +25,9 @@ from protein_interaction_hunter.adapters.local.gff import LocalGff3Loader
 from protein_interaction_hunter.adapters.local.orthology import (
     LocalOrthologyTsvLoader,
 )
+from protein_interaction_hunter.adapters.local.phylogenetic_profile import (
+    LocalPhylogeneticProfileTsvLoader,
+)
 from protein_interaction_hunter.application.candidates import generate_candidates
 from protein_interaction_hunter.application.domain_pairs import (
     DOMAIN_PAIR_ENGINE_VERSION,
@@ -54,6 +57,11 @@ from protein_interaction_hunter.application.orthology import (
     build_orthology_index,
     evaluate_orthology_pair,
 )
+from protein_interaction_hunter.application.phylogenetic_profile import (
+    PHYLOGENETIC_PROFILE_ENGINE_VERSION,
+    build_phylogenetic_profile_index,
+    evaluate_phylogenetic_profile_pair,
+)
 from protein_interaction_hunter.config import AppConfig, load_config
 from protein_interaction_hunter.exceptions import InputValidationError
 from protein_interaction_hunter.manifest import build_input_file_manifest, build_run_manifest
@@ -75,6 +83,7 @@ from protein_interaction_hunter.models.evidence import (
     LocalizationEvidence,
     OperonEvidence,
     OrthologRecord,
+    PhylogeneticProfileEvidence,
 )
 from protein_interaction_hunter.outputs.candidates import (
     CandidateTableTsvWriter,
@@ -87,7 +96,6 @@ from protein_interaction_hunter.outputs.jsonl import (
 )
 
 _UNIMPLEMENTED_ENGINES = (
-    "phylogenetic_profile",
     "fusion",
     "known_interactions",
     "scoring",
@@ -445,6 +453,44 @@ def _excel_orthology_rows(
     return rows
 
 
+def _excel_phylogenetic_profile_rows(
+    run_id: str,
+    profile_evidence: dict[tuple[str, str], PhylogeneticProfileEvidence],
+) -> list[dict[str, object]]:
+    rows: list[dict[str, object]] = []
+    for (query_id, candidate_id), evidence in sorted(profile_evidence.items()):
+        rows.append(
+            {
+                "Run_ID": run_id,
+                "Query_ID": query_id,
+                "Candidate_ID": candidate_id,
+                "Status": evidence.status,
+                "Informative_Species": evidence.informative_species_count,
+                "Shared_Presence": evidence.shared_presence_count,
+                "Shared_Absence": evidence.shared_absence_count,
+                "Discordant": evidence.discordant_count,
+                "Unknown": evidence.unknown_count,
+                "Profile_Similarity": evidence.profile_similarity,
+                "Pair_Supported": evidence.pair_supported,
+                "Support_Terms": "|".join(evidence.support_terms),
+                "Conflicting_Terms": "|".join(evidence.conflicting_terms),
+                "Rule_Version": evidence.calculation_rule_version,
+                "Source": evidence.source,
+                "Source_Record_ID": evidence.source_record_id,
+                "Warnings": "|".join(evidence.warnings),
+                "Provenance": "|".join(
+                    "{}:{}:{}".format(
+                        item.source_name,
+                        item.source_version or "",
+                        item.method or "",
+                    )
+                    for item in evidence.provenance
+                ),
+            }
+        )
+    return rows
+
+
 class InteractionCandidatePipeline:
     """Generate auditable candidates and coordinate-derived context without scoring."""
 
@@ -533,6 +579,35 @@ class InteractionCandidatePipeline:
                     query_protein_id,
                     candidate.protein_id,
                     orthology_index,
+                )
+
+        phylogenetic_profile_evidence: dict[
+            tuple[str, str],
+            PhylogeneticProfileEvidence,
+        ] = {}
+
+        if config.phylogenetic_profile.enabled:
+            profile_table_path = config.phylogenetic_profile.local_table
+            if profile_table_path is None:
+                raise InputValidationError(
+                    "phylogenetic_profile.local_table is required when "
+                    "phylogenetic_profile.enabled is true"
+                )
+            profile_records = LocalPhylogeneticProfileTsvLoader().load(profile_table_path)
+            profile_index = build_phylogenetic_profile_index(profile_records)
+            for candidate in generated.candidates:
+                pair = (candidate.query_id, candidate.protein_id)
+                phylogenetic_profile_evidence[pair] = evaluate_phylogenetic_profile_pair(
+                    canonical_query_ids[candidate.query_id],
+                    candidate.protein_id,
+                    profile_index,
+                    minimum_shared_species=(config.phylogenetic_profile.minimum_shared_species),
+                    minimum_informative_species=(
+                        config.phylogenetic_profile.minimum_informative_species
+                    ),
+                    minimum_profile_similarity=(
+                        config.phylogenetic_profile.minimum_profile_similarity
+                    ),
                 )
 
         domain_evidence: dict[
@@ -670,6 +745,7 @@ class InteractionCandidatePipeline:
             functional = functional_evidence.get(pair, [])
             localization = localization_evidence.get(pair)
             orthology = orthology_evidence.get(pair, [])
+            profile = phylogenetic_profile_evidence.get(pair)
 
             statuses = {engine: EvidenceStatus.NOT_RUN for engine in _UNIMPLEMENTED_ENGINES}
             statuses["gene_context"] = context.status if context else EvidenceStatus.NOT_RUN
@@ -682,6 +758,7 @@ class InteractionCandidatePipeline:
                 localization.status if localization else EvidenceStatus.NOT_RUN
             )
             statuses["orthology"] = orthology[0].status if orthology else EvidenceStatus.NOT_RUN
+            statuses["phylogenetic_profile"] = profile.status if profile else EvidenceStatus.NOT_RUN
 
             context_warnings = context.warnings if context else []
             operon_warnings = operon.warnings if operon else []
@@ -693,12 +770,14 @@ class InteractionCandidatePipeline:
             orthology_warnings = [
                 warning for evidence in orthology for warning in evidence.warnings
             ]
+            profile_warnings = profile.warnings if profile else []
             bundles.append(
                 CandidateEvidenceBundle(
                     domains=domains,
                     functional=functional,
                     localization=([localization] if localization else []),
                     orthology=orthology,
+                    phylogenetic_profile=[profile] if profile else [],
                     run_id=run_id,
                     query_id=candidate.query_id,
                     candidate_id=candidate.protein_id,
@@ -719,6 +798,7 @@ class InteractionCandidatePipeline:
                             + functional_warnings
                             + localization_warnings
                             + orthology_warnings
+                            + profile_warnings
                         )
                     ),
                 )
@@ -736,6 +816,7 @@ class InteractionCandidatePipeline:
             localization=localization_evidence,
             functional=functional_evidence,
             orthology=orthology_evidence,
+            phylogenetic_profile=phylogenetic_profile_evidence,
         )
         all_warnings = [warning for bundle in bundles for warning in bundle.warnings]
         warning_summary_path = WarningSummaryTsvWriter().write(
@@ -764,6 +845,12 @@ class InteractionCandidatePipeline:
                         run_id,
                         orthology_evidence,
                     ),
+                    "Phylogenetic_Profile_Evidence": (
+                        _excel_phylogenetic_profile_rows(
+                            run_id,
+                            phylogenetic_profile_evidence,
+                        )
+                    ),
                 },
             )
         input_files = [
@@ -780,6 +867,17 @@ class InteractionCandidatePipeline:
             input_files.append(
                 build_input_file_manifest(
                     "orthology_local_table", config.orthology.local_table, required=True
+                )
+            )
+        if (
+            config.phylogenetic_profile.enabled
+            and config.phylogenetic_profile.local_table is not None
+        ):
+            input_files.append(
+                build_input_file_manifest(
+                    "phylogenetic_profile_local_table",
+                    config.phylogenetic_profile.local_table,
+                    required=True,
                 )
             )
         manifest = build_run_manifest(
@@ -800,6 +898,9 @@ class InteractionCandidatePipeline:
         )
         manifest.orthology_rule_version = (
             ORTHOLOGY_ENGINE_VERSION if config.orthology.enabled else None
+        )
+        manifest.phylogenetic_profile_rule_version = (
+            PHYLOGENETIC_PROFILE_ENGINE_VERSION if config.phylogenetic_profile.enabled else None
         )
 
         if config.gene_context.enabled:
@@ -829,6 +930,8 @@ class InteractionCandidatePipeline:
         ]
         if not config.gene_context.enabled:
             manifest.incomplete_evidence_flags.extend(["gene_context_not_run", "operon_not_run"])
+        if not config.phylogenetic_profile.enabled:
+            manifest.incomplete_evidence_flags.append("phylogenetic_profile_not_run")
         manifest_path = JsonRunManifestWriter().write(manifest, output_path / "run_manifest.json")
         disposition_counts = {
             disposition: sum(

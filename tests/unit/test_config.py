@@ -79,3 +79,30 @@ def test_orthology_local_table_path_is_resolved(
         config.orthology.local_table
         == (valid_config_path.parent / "synthetic_orthology.tsv").resolve()
     )
+
+
+def test_phylogenetic_profile_path_and_thresholds_are_resolved(
+    valid_config_path: Path,
+) -> None:
+    config = load_config(valid_config_path)
+    assert config.phylogenetic_profile.enabled is True
+    assert config.phylogenetic_profile.minimum_shared_species == 2
+    assert config.phylogenetic_profile.minimum_informative_species == 3
+    assert config.phylogenetic_profile.minimum_profile_similarity == 0.8
+    assert (
+        config.phylogenetic_profile.local_table
+        == (valid_config_path.parent / "synthetic_phylogenetic_profiles.tsv").resolve()
+    )
+
+
+def test_absent_phylogenetic_profile_section_defaults_to_disabled(
+    valid_config_path: Path,
+    tmp_path: Path,
+) -> None:
+    data = yaml.safe_load(valid_config_path.read_text(encoding="utf-8"))
+    del data["phylogenetic_profile"]
+    path = tmp_path / "without-profile.yaml"
+    path.write_text(yaml.safe_dump(data), encoding="utf-8")
+    config = load_config(path)
+    assert config.phylogenetic_profile.enabled is False
+    assert config.phylogenetic_profile.local_table is None

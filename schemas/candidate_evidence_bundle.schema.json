@@ -2485,21 +2485,32 @@
     "PhylogeneticProfileEvidence": {
       "additionalProperties": false,
       "properties": {
-        "corrected_similarity": {
+        "calculation_rule_version": {
           "anyOf": [
             {
-              "maximum": 1.0,
-              "minimum": -1.0,
-              "type": "number"
+              "minLength": 1,
+              "type": "string"
             },
             {
               "type": "null"
             }
           ],
           "default": null,
-          "title": "Corrected Similarity"
+          "title": "Calculation Rule Version"
         },
-        "informative_taxa": {
+        "candidate_protein_id": {
+          "minLength": 1,
+          "title": "Candidate Protein Id",
+          "type": "string"
+        },
+        "conflicting_terms": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Conflicting Terms",
+          "type": "array"
+        },
+        "discordant_count": {
           "anyOf": [
             {
               "minimum": 0,
@@ -2510,9 +2521,38 @@
             }
           ],
           "default": null,
-          "title": "Informative Taxa"
+          "title": "Discordant Count"
         },
-        "missing_rate": {
+        "informative_species_count": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Informative Species Count"
+        },
+        "origin": {
+          "$ref": "#/$defs/EvidenceOrigin",
+          "default": "inferred"
+        },
+        "pair_supported": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Pair Supported"
+        },
+        "profile_similarity": {
           "anyOf": [
             {
               "maximum": 1.0,
@@ -2524,11 +2564,7 @@
             }
           ],
           "default": null,
-          "title": "Missing Rate"
-        },
-        "origin": {
-          "$ref": "#/$defs/EvidenceOrigin",
-          "default": "inferred"
+          "title": "Profile Similarity"
         },
         "provenance": {
           "items": {
@@ -2551,23 +2587,86 @@
           "default": null,
           "title": "Quality"
         },
-        "raw_similarity": {
+        "query_protein_id": {
+          "minLength": 1,
+          "title": "Query Protein Id",
+          "type": "string"
+        },
+        "shared_absence_count": {
           "anyOf": [
             {
-              "maximum": 1.0,
-              "minimum": -1.0,
-              "type": "number"
+              "minimum": 0,
+              "type": "integer"
             },
             {
               "type": "null"
             }
           ],
           "default": null,
-          "title": "Raw Similarity"
+          "title": "Shared Absence Count"
+        },
+        "shared_presence_count": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Shared Presence Count"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source"
+        },
+        "source_record_id": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Record Id"
         },
         "status": {
           "$ref": "#/$defs/EvidenceStatus",
           "default": "not_run"
+        },
+        "support_terms": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Support Terms",
+          "type": "array"
+        },
+        "unknown_count": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Unknown Count"
         },
         "warnings": {
           "items": {
@@ -2577,6 +2676,10 @@
           "type": "array"
         }
       },
+      "required": [
+        "query_protein_id",
+        "candidate_protein_id"
+      ],
       "title": "PhylogeneticProfileEvidence",
       "type": "object"
     },

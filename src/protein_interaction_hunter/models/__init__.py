@@ -49,6 +49,9 @@ from protein_interaction_hunter.models.genome import (
     SequenceRegion,
 )
 from protein_interaction_hunter.models.identity import IdentifierAlias, IdentifierResolution
+from protein_interaction_hunter.models.phylogenetic_profile import (
+    PhylogeneticProfileObservation,
+)
 from protein_interaction_hunter.models.protein import (
     CandidateProtein,
     ProteinRecord,
@@ -90,6 +93,7 @@ __all__ = [
     "OperonEvidence",
     "OrthologRecord",
     "PhylogeneticProfileEvidence",
+    "PhylogeneticProfileObservation",
     "PredictedRelationshipType",
     "ProteinRecord",
     "QueryProtein",

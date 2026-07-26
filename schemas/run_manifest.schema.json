@@ -214,6 +214,19 @@
       "title": "Parser Warnings",
       "type": "array"
     },
+    "phylogenetic_profile_rule_version": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Phylogenetic Profile Rule Version"
+    },
     "platform": {
       "minLength": 1,
       "title": "Platform",

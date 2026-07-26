@@ -16,6 +16,9 @@ from protein_interaction_hunter.application.localization import (
 from protein_interaction_hunter.application.orthology import (
     ORTHOLOGY_ENGINE_VERSION,
 )
+from protein_interaction_hunter.application.phylogenetic_profile import (
+    PHYLOGENETIC_PROFILE_ENGINE_VERSION,
+)
 from protein_interaction_hunter.application.pipeline import InteractionCandidatePipeline
 from protein_interaction_hunter.cli import app
 from protein_interaction_hunter.models import CandidateEvidenceBundle, EvidenceStatus, RunManifest
@@ -41,6 +44,10 @@ def e2e_config(source: Path, tmp_path: Path) -> Path:
     orthology_table = data["orthology"].get("local_table")
     if orthology_table is not None:
         data["orthology"]["local_table"] = str((fixture_dir / orthology_table).resolve())
+
+    profile_table = data["phylogenetic_profile"].get("local_table")
+    if profile_table is not None:
+        data["phylogenetic_profile"]["local_table"] = str((fixture_dir / profile_table).resolve())
 
     domain_rules_path = data["domains"].get("rules_path")
     if domain_rules_path is not None:
@@ -85,6 +92,11 @@ def test_pipeline_gene_context_scores_and_jsonl_round_trip(
         assert len(bundle.orthology) >= 1
         assert bundle.engine_statuses["orthology"] is bundle.orthology[0].status
 
+        assert len(bundle.phylogenetic_profile) == 1
+        assert (
+            bundle.engine_statuses["phylogenetic_profile"] is bundle.phylogenetic_profile[0].status
+        )
+
         assert all(
             status is EvidenceStatus.NOT_RUN
             for engine, status in bundle.engine_statuses.items()
@@ -96,6 +108,7 @@ def test_pipeline_gene_context_scores_and_jsonl_round_trip(
                 "functional_complementarity",
                 "localization",
                 "orthology",
+                "phylogenetic_profile",
             }
         )
 
@@ -165,6 +178,16 @@ def test_candidate_tsv_header_and_manifest_provenance(
     assert rows_by_id["NEAR_001"]["orthology_pair_supported"] == "True"
     assert rows_by_id["NEAR_001"]["orthology_rule_version"] == ORTHOLOGY_ENGINE_VERSION
 
+    assert rows_by_id["NEAR_001"]["phylogenetic_profile_status"] == "available"
+    assert rows_by_id["NEAR_001"]["phylogenetic_profile_similarity"] == "1.0"
+    assert rows_by_id["NEAR_001"]["phylogenetic_profile_pair_supported"] == "True"
+    assert (
+        rows_by_id["NEAR_001"]["phylogenetic_profile_rule_version"]
+        == PHYLOGENETIC_PROFILE_ENGINE_VERSION
+    )
+    assert rows_by_id["PARA_001"]["phylogenetic_profile_status"] == "missing"
+    assert rows_by_id["PARA_001"]["phylogenetic_profile_pair_supported"] == ""
+
     assert rows_by_id["NEAR_001"]["localization_status"] == "available"
     assert rows_by_id["NEAR_001"]["localization_query_compartment"] == "cytosolic"
     assert rows_by_id["NEAR_001"]["localization_compartment"] == "cytosolic"
@@ -196,6 +219,10 @@ def test_candidate_tsv_header_and_manifest_provenance(
     assert manifest.normalization_rule_version == NORMALIZATION_RULE_VERSION
     assert manifest.gene_context_rule_version == GENE_CONTEXT_RULE_VERSION
     assert manifest.orthology_rule_version == ORTHOLOGY_ENGINE_VERSION
+    assert manifest.phylogenetic_profile_rule_version == PHYLOGENETIC_PROFILE_ENGINE_VERSION
+    assert "phylogenetic_profile_local_table" in input_files_by_name
+    assert input_files_by_name["phylogenetic_profile_local_table"].required is True
+    assert input_files_by_name["phylogenetic_profile_local_table"].sha256
     assert manifest.policy_settings["fragment_policy"] == "flag"
     assert manifest.policy_settings["localization_rule_version"] == LOCALIZATION_ENGINE_VERSION
     assert "scoring_not_run" in manifest.incomplete_evidence_flags
@@ -238,6 +265,18 @@ def test_candidate_tsv_header_and_manifest_provenance(
     assert orthology_by_candidate["NEAR_001"]["Pair_Supported"] is True
     assert orthology_by_candidate["NEAR_001"]["Rule_Version"] == ORTHOLOGY_ENGINE_VERSION
 
+    assert "Phylogenetic_Profile_Evidence" in workbook.sheetnames
+    profile_sheet = workbook["Phylogenetic_Profile_Evidence"]
+    profile_headers = [cell.value for cell in next(profile_sheet.iter_rows(max_row=1))]
+    profile_rows = [
+        dict(zip(profile_headers, values, strict=True))
+        for values in profile_sheet.iter_rows(min_row=2, values_only=True)
+    ]
+    profiles_by_candidate = {row["Candidate_ID"]: row for row in profile_rows}
+    assert profiles_by_candidate["NEAR_001"]["Profile_Similarity"] == 1.0
+    assert profiles_by_candidate["NEAR_001"]["Pair_Supported"] is True
+    assert profiles_by_candidate["PARA_001"]["Status"] == "missing"
+
     assert "Localization_Evidence" in workbook.sheetnames
 
     worksheet = workbook["Localization_Evidence"]
@@ -272,6 +311,40 @@ def test_candidate_tsv_header_and_manifest_provenance(
     assert localization_rows["MEM_001"]["Topology"] == "multi_pass"
 
     workbook.close()
+
+
+def test_profile_is_shadow_only_and_disabled_is_not_run(
+    valid_config_path: Path,
+    tmp_path: Path,
+) -> None:
+    enabled_dir = tmp_path / "enabled"
+    enabled_dir.mkdir()
+    enabled_config = e2e_config(valid_config_path, enabled_dir)
+    enabled_result = InteractionCandidatePipeline().run(enabled_config)
+
+    disabled_data = yaml.safe_load(enabled_config.read_text(encoding="utf-8"))
+    disabled_data["phylogenetic_profile"]["enabled"] = False
+    disabled_data["output"]["directory"] = str(tmp_path / "disabled-output")
+    disabled_config = tmp_path / "disabled.yaml"
+    disabled_config.write_text(
+        yaml.safe_dump(disabled_data, sort_keys=False),
+        encoding="utf-8",
+    )
+    disabled_result = InteractionCandidatePipeline().run(disabled_config)
+
+    assert [bundle.candidate_id for bundle in enabled_result.bundles] == [
+        bundle.candidate_id for bundle in disabled_result.bundles
+    ]
+    for enabled, disabled in zip(
+        enabled_result.bundles,
+        disabled_result.bundles,
+        strict=True,
+    ):
+        assert enabled.score == disabled.score
+        assert enabled.evidence_tier == disabled.evidence_tier
+        assert enabled.predicted_relationship_type == disabled.predicted_relationship_type
+        assert disabled.phylogenetic_profile == []
+        assert disabled.engine_statuses["phylogenetic_profile"] is EvidenceStatus.NOT_RUN
 
 
 def test_generate_candidates_cli_e2e_has_no_ranking_output(

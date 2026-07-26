@@ -1,0 +1,16 @@
+protein_id	species_id	presence	taxonomic_group	source	source_record_id
+QUERY_001	sp_a	true	archaea	synthetic_profiles	query-a
+QUERY_001	sp_b	1	archaea	synthetic_profiles	query-b
+QUERY_001	sp_c	false	bacteria	synthetic_profiles	query-c
+QUERY_001	sp_d	0	bacteria	synthetic_profiles	query-d
+QUERY_001	sp_e		eukaryota	synthetic_profiles	query-e
+NEAR_001	sp_a	yes	archaea	synthetic_profiles	near-a
+NEAR_001	sp_b	true	archaea	synthetic_profiles	near-b
+NEAR_001	sp_c	no	bacteria	synthetic_profiles	near-c
+NEAR_001	sp_d	false	bacteria	synthetic_profiles	near-d
+NEAR_001	sp_e		eukaryota	synthetic_profiles	near-e
+MEM_001	sp_a	false	archaea	synthetic_profiles	mem-a
+MEM_001	sp_b	true	archaea	synthetic_profiles	mem-b
+MEM_001	sp_c	false	bacteria	synthetic_profiles	mem-c
+MEM_001	sp_d	true	bacteria	synthetic_profiles	mem-d
+MEM_001	sp_e	true	eukaryota	synthetic_profiles	mem-e

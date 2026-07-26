@@ -67,6 +67,15 @@ class OrthologyConfig(StrictModel):
     local_table: Path | None = None
 
 
+class PhylogeneticProfileConfig(StrictModel):
+    enabled: bool = False
+    source: Literal["local_table"] = "local_table"
+    local_table: Path | None = None
+    minimum_shared_species: int = Field(default=2, ge=1)
+    minimum_informative_species: int = Field(default=3, ge=1)
+    minimum_profile_similarity: float = Field(default=0.8, ge=0.0, le=1.0)
+
+
 class EnabledConfig(StrictModel):
     enabled: bool = False
 
@@ -141,7 +150,9 @@ class AppConfig(StrictModel):
     candidate_generation: CandidateGenerationConfig
     gene_context: GeneContextConfig
     orthology: OrthologyConfig
-    phylogenetic_profile: EnabledConfig
+    phylogenetic_profile: PhylogeneticProfileConfig = Field(
+        default_factory=PhylogeneticProfileConfig
+    )
     domains: DomainConfig
     functional_complementarity: FunctionalComplementarityConfig
     localization: LocalizationConfig
@@ -176,6 +187,10 @@ def resolve_config_paths(config: AppConfig, base_directory: Path) -> AppConfig:
     )
     data["orthology"]["local_table"] = _resolve(
         data["orthology"]["local_table"],
+        base_directory,
+    )
+    data["phylogenetic_profile"]["local_table"] = _resolve(
+        data["phylogenetic_profile"]["local_table"],
         base_directory,
     )
 
