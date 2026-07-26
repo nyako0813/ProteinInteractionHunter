@@ -13,6 +13,9 @@ from protein_interaction_hunter.application.identifiers import NORMALIZATION_RUL
 from protein_interaction_hunter.application.localization import (
     LOCALIZATION_ENGINE_VERSION,
 )
+from protein_interaction_hunter.application.orthology import (
+    ORTHOLOGY_ENGINE_VERSION,
+)
 from protein_interaction_hunter.application.pipeline import InteractionCandidatePipeline
 from protein_interaction_hunter.cli import app
 from protein_interaction_hunter.models import CandidateEvidenceBundle, EvidenceStatus, RunManifest
@@ -24,38 +27,28 @@ def e2e_config(source: Path, tmp_path: Path) -> Path:
     data = yaml.safe_load(source.read_text(encoding="utf-8"))
     fixture_dir = source.parent
 
-    data["input"]["proteome_fasta"] = str(
-        (fixture_dir / data["input"]["proteome_fasta"]).resolve()
-    )
-    data["input"]["genome_gff"] = str(
-        (fixture_dir / data["input"]["genome_gff"]).resolve()
-    )
+    data["input"]["proteome_fasta"] = str((fixture_dir / data["input"]["proteome_fasta"]).resolve())
+    data["input"]["genome_gff"] = str((fixture_dir / data["input"]["genome_gff"]).resolve())
 
     annotation_table = data["input"].get("annotation_table")
     if annotation_table is not None:
-        data["input"]["annotation_table"] = str(
-            (fixture_dir / annotation_table).resolve()
-        )
+        data["input"]["annotation_table"] = str((fixture_dir / annotation_table).resolve())
 
     domain_table = data["domains"].get("local_table")
     if domain_table is not None:
-        data["domains"]["local_table"] = str(
-            (fixture_dir / domain_table).resolve()
-        )
+        data["domains"]["local_table"] = str((fixture_dir / domain_table).resolve())
+
+    orthology_table = data["orthology"].get("local_table")
+    if orthology_table is not None:
+        data["orthology"]["local_table"] = str((fixture_dir / orthology_table).resolve())
 
     domain_rules_path = data["domains"].get("rules_path")
     if domain_rules_path is not None:
-        data["domains"]["rules_path"] = str(
-            (fixture_dir / domain_rules_path).resolve()
-        )
+        data["domains"]["rules_path"] = str((fixture_dir / domain_rules_path).resolve())
 
-    rules_path = data["functional_complementarity"].get(
-        "rules_path"
-    )
+    rules_path = data["functional_complementarity"].get("rules_path")
     if rules_path is not None:
-        data["functional_complementarity"]["rules_path"] = str(
-            (fixture_dir / rules_path).resolve()
-        )
+        data["functional_complementarity"]["rules_path"] = str((fixture_dir / rules_path).resolve())
 
     data["localization"]["enabled"] = True
     data["localization"]["source"] = "annotation_only"
@@ -73,39 +66,24 @@ def e2e_config(source: Path, tmp_path: Path) -> Path:
 def test_pipeline_gene_context_scores_and_jsonl_round_trip(
     valid_config_path: Path, tmp_path: Path
 ) -> None:
-    result = InteractionCandidatePipeline().run(
-        e2e_config(valid_config_path, tmp_path)
-    )
+    result = InteractionCandidatePipeline().run(e2e_config(valid_config_path, tmp_path))
     assert len(result.bundles) == 12
 
     for bundle in result.bundles:
         assert len(bundle.genome_context) == 1
-        assert (
-            bundle.engine_statuses["gene_context"]
-            is bundle.genome_context[0].status
-        )
+        assert bundle.engine_statuses["gene_context"] is bundle.genome_context[0].status
 
         assert len(bundle.operon) == 1
-        assert (
-            bundle.engine_statuses["operon"]
-            is bundle.operon[0].status
-        )
+        assert bundle.engine_statuses["operon"] is bundle.operon[0].status
 
         assert len(bundle.functional) >= 1
-        assert (
-            bundle.engine_statuses["functional_complementarity"]
-            is bundle.functional[0].status
-        )
+        assert bundle.engine_statuses["functional_complementarity"] is bundle.functional[0].status
         assert len(bundle.domains) >= 1
-        assert (
-            bundle.engine_statuses["domains"]
-            is bundle.domains[0].status
-        )
+        assert bundle.engine_statuses["domains"] is bundle.domains[0].status
         assert len(bundle.localization) == 1
-        assert (
-            bundle.engine_statuses["localization"]
-            is bundle.localization[0].status
-        )
+        assert bundle.engine_statuses["localization"] is bundle.localization[0].status
+        assert len(bundle.orthology) >= 1
+        assert bundle.engine_statuses["orthology"] is bundle.orthology[0].status
 
         assert all(
             status is EvidenceStatus.NOT_RUN
@@ -117,23 +95,17 @@ def test_pipeline_gene_context_scores_and_jsonl_round_trip(
                 "domains",
                 "functional_complementarity",
                 "localization",
+                "orthology",
             }
         )
 
         scores = bundle.score.model_dump()
-        assert all(
-            value is None
-            for key, value in scores.items()
-            if key.endswith("_score")
-        )
+        assert all(value is None for key, value in scores.items() if key.endswith("_score"))
         assert bundle.score.contradiction_penalty is None
         assert bundle.score.evidence_completeness is None
         assert bundle.evidence_tier is None
 
-    bundles_by_id = {
-        bundle.candidate_id: bundle
-        for bundle in result.bundles
-    }
+    bundles_by_id = {bundle.candidate_id: bundle for bundle in result.bundles}
 
     near_localization = bundles_by_id["NEAR_001"].localization[0]
     assert near_localization.status is EvidenceStatus.AVAILABLE
@@ -148,20 +120,13 @@ def test_pipeline_gene_context_scores_and_jsonl_round_trip(
     assert membrane_localization.query_compartment == "cytosolic"
     assert membrane_localization.candidate_compartment == "membrane"
     assert membrane_localization.compatibility is False
-    assert "different_compartment" in (
-        membrane_localization.conflicting_terms
-    )
+    assert "different_compartment" in (membrane_localization.conflicting_terms)
     assert membrane_localization.topology == "multi_pass"
 
-    assert (
-        JsonlEvidenceBundleWriter().read(result.evidence_path)
-        == result.bundles
-    )
+    assert JsonlEvidenceBundleWriter().read(result.evidence_path) == result.bundles
     assert all(
         CandidateEvidenceBundle.model_validate_json(line)
-        for line in result.evidence_path.read_text(
-            encoding="utf-8"
-        ).splitlines()
+        for line in result.evidence_path.read_text(encoding="utf-8").splitlines()
     )
 
 
@@ -196,41 +161,22 @@ def test_candidate_tsv_header_and_manifest_provenance(
     assert rows_by_id["CONTIG2_001"]["distance_bp"] == ""
     assert rows_by_id["FRAG_001"]["gene_context_status"] == "missing"
 
+    assert rows_by_id["NEAR_001"]["orthology_status"] == "available"
+    assert rows_by_id["NEAR_001"]["orthology_pair_supported"] == "True"
+    assert rows_by_id["NEAR_001"]["orthology_rule_version"] == ORTHOLOGY_ENGINE_VERSION
+
     assert rows_by_id["NEAR_001"]["localization_status"] == "available"
-    assert (
-        rows_by_id["NEAR_001"]["localization_query_compartment"]
-        == "cytosolic"
-    )
-    assert (
-        rows_by_id["NEAR_001"]["localization_compartment"]
-        == "cytosolic"
-    )
-    assert (
-        rows_by_id["NEAR_001"]["localization_compatibility"]
-        == "True"
-    )
+    assert rows_by_id["NEAR_001"]["localization_query_compartment"] == "cytosolic"
+    assert rows_by_id["NEAR_001"]["localization_compartment"] == "cytosolic"
+    assert rows_by_id["NEAR_001"]["localization_compatibility"] == "True"
     assert rows_by_id["NEAR_001"]["localization_tm_helices"] == "0"
-    assert (
-        rows_by_id["NEAR_001"]["localization_topology"]
-        == "none"
-    )
+    assert rows_by_id["NEAR_001"]["localization_topology"] == "none"
 
     assert rows_by_id["MEM_001"]["localization_status"] == "available"
-    assert (
-        rows_by_id["MEM_001"]["localization_compartment"]
-        == "membrane"
-    )
-    assert (
-        rows_by_id["MEM_001"]["localization_compatibility"]
-        == "False"
-    )
-    assert (
-        rows_by_id["MEM_001"]["localization_topology"]
-        == "multi_pass"
-    )
-    assert "different_compartment" in (
-        rows_by_id["MEM_001"]["localization_conflicting_terms"]
-    )
+    assert rows_by_id["MEM_001"]["localization_compartment"] == "membrane"
+    assert rows_by_id["MEM_001"]["localization_compatibility"] == "False"
+    assert rows_by_id["MEM_001"]["localization_topology"] == "multi_pass"
+    assert "different_compartment" in (rows_by_id["MEM_001"]["localization_conflicting_terms"])
 
     manifest = RunManifest.model_validate_json(
         result.manifest_path.read_text(
@@ -240,30 +186,21 @@ def test_candidate_tsv_header_and_manifest_provenance(
 
     assert manifest.config_sha256
     assert all(item.sha256 for item in manifest.input_files)
+    input_files_by_name = {item.logical_name: item for item in manifest.input_files}
+
+    assert "orthology_local_table" in input_files_by_name
+    assert input_files_by_name["orthology_local_table"].required is True
+    assert input_files_by_name["orthology_local_table"].sha256
     assert manifest.package_version == "0.1.0"
     assert manifest.git_commit
-    assert (
-        manifest.normalization_rule_version
-        == NORMALIZATION_RULE_VERSION
-    )
-    assert (
-        manifest.gene_context_rule_version
-        == GENE_CONTEXT_RULE_VERSION
-    )
+    assert manifest.normalization_rule_version == NORMALIZATION_RULE_VERSION
+    assert manifest.gene_context_rule_version == GENE_CONTEXT_RULE_VERSION
+    assert manifest.orthology_rule_version == ORTHOLOGY_ENGINE_VERSION
     assert manifest.policy_settings["fragment_policy"] == "flag"
-    assert (
-        manifest.policy_settings["localization_rule_version"]
-        == LOCALIZATION_ENGINE_VERSION
-    )
+    assert manifest.policy_settings["localization_rule_version"] == LOCALIZATION_ENGINE_VERSION
     assert "scoring_not_run" in manifest.incomplete_evidence_flags
-    assert (
-        "gene_context_not_run"
-        not in manifest.incomplete_evidence_flags
-    )
-    assert (
-        "localization_not_run"
-        not in manifest.incomplete_evidence_flags
-    )
+    assert "gene_context_not_run" not in manifest.incomplete_evidence_flags
+    assert "localization_not_run" not in manifest.incomplete_evidence_flags
 
     assert result.config_snapshot_path.is_file()
     assert result.warning_summary_path.is_file()
@@ -275,6 +212,32 @@ def test_candidate_tsv_header_and_manifest_provenance(
         read_only=True,
         data_only=True,
     )
+
+    assert "Orthology_Evidence" in workbook.sheetnames
+
+    orthology_sheet = workbook["Orthology_Evidence"]
+    orthology_headers = [
+        cell.value
+        for cell in next(
+            orthology_sheet.iter_rows(
+                min_row=1,
+                max_row=1,
+            )
+        )
+    ]
+    orthology_rows = [
+        dict(zip(orthology_headers, values, strict=True))
+        for values in orthology_sheet.iter_rows(
+            min_row=2,
+            values_only=True,
+        )
+    ]
+    orthology_by_candidate = {row["Candidate_ID"]: row for row in orthology_rows}
+
+    assert orthology_by_candidate["NEAR_001"]["Status"] == "available"
+    assert orthology_by_candidate["NEAR_001"]["Pair_Supported"] is True
+    assert orthology_by_candidate["NEAR_001"]["Rule_Version"] == ORTHOLOGY_ENGINE_VERSION
+
     assert "Localization_Evidence" in workbook.sheetnames
 
     worksheet = workbook["Localization_Evidence"]
@@ -295,32 +258,21 @@ def test_candidate_tsv_header_and_manifest_provenance(
         )
     ]
 
-    localization_rows = {
-        row["Candidate_ID"]: row
-        for row in rows
-    }
+    localization_rows = {row["Candidate_ID"]: row for row in rows}
 
     assert localization_rows["NEAR_001"]["Status"] == "available"
-    assert (
-        localization_rows["NEAR_001"]["Query_Compartment"]
-        == "cytosolic"
-    )
-    assert (
-        localization_rows["NEAR_001"]["Candidate_Compartment"]
-        == "cytosolic"
-    )
+    assert localization_rows["NEAR_001"]["Query_Compartment"] == "cytosolic"
+    assert localization_rows["NEAR_001"]["Candidate_Compartment"] == "cytosolic"
     assert localization_rows["NEAR_001"]["Compatibility"] is True
     assert localization_rows["NEAR_001"]["Topology"] == "none"
 
     assert localization_rows["MEM_001"]["Status"] == "available"
-    assert (
-        localization_rows["MEM_001"]["Candidate_Compartment"]
-        == "membrane"
-    )
+    assert localization_rows["MEM_001"]["Candidate_Compartment"] == "membrane"
     assert localization_rows["MEM_001"]["Compatibility"] is False
     assert localization_rows["MEM_001"]["Topology"] == "multi_pass"
 
     workbook.close()
+
 
 def test_generate_candidates_cli_e2e_has_no_ranking_output(
     valid_config_path: Path, tmp_path: Path

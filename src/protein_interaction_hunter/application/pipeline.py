@@ -22,6 +22,9 @@ from protein_interaction_hunter.adapters.local.functional_rules import (
     LocalFunctionalRulesLoader,
 )
 from protein_interaction_hunter.adapters.local.gff import LocalGff3Loader
+from protein_interaction_hunter.adapters.local.orthology import (
+    LocalOrthologyTsvLoader,
+)
 from protein_interaction_hunter.application.candidates import generate_candidates
 from protein_interaction_hunter.application.domain_pairs import (
     DOMAIN_PAIR_ENGINE_VERSION,
@@ -46,6 +49,11 @@ from protein_interaction_hunter.application.operon_proxy import (
     OPERON_PROXY_RULE_VERSION,
     calculate_operon_proxy,
 )
+from protein_interaction_hunter.application.orthology import (
+    ORTHOLOGY_ENGINE_VERSION,
+    build_orthology_index,
+    evaluate_orthology_pair,
+)
 from protein_interaction_hunter.config import AppConfig, load_config
 from protein_interaction_hunter.exceptions import InputValidationError
 from protein_interaction_hunter.manifest import build_input_file_manifest, build_run_manifest
@@ -66,6 +74,7 @@ from protein_interaction_hunter.models.evidence import (
     GenomeContextEvidence,
     LocalizationEvidence,
     OperonEvidence,
+    OrthologRecord,
 )
 from protein_interaction_hunter.outputs.candidates import (
     CandidateTableTsvWriter,
@@ -78,7 +87,6 @@ from protein_interaction_hunter.outputs.jsonl import (
 )
 
 _UNIMPLEMENTED_ENGINES = (
-    "orthology",
     "phylogenetic_profile",
     "fusion",
     "known_interactions",
@@ -133,6 +141,7 @@ def _git_commit(repository: Path) -> str | None:
         return None
     return result.stdout.strip() or None
 
+
 def _functional_annotation_text(
     protein_id: str,
     annotation_by_protein: dict[str, AnnotationRecord],
@@ -146,13 +155,10 @@ def _functional_annotation_text(
         description_by_protein.get(protein_id),
     ]
 
-    text = " | ".join(
-        value.strip()
-        for value in values
-        if value is not None and value.strip()
-    )
+    text = " | ".join(value.strip() for value in values if value is not None and value.strip())
 
     return text or None
+
 
 def _policy_settings(config: AppConfig) -> dict[str, str | int | bool]:
     policy = config.candidate_generation
@@ -166,9 +172,7 @@ def _policy_settings(config: AppConfig) -> dict[str, str | int | bool]:
         "gene_context_enabled": config.gene_context.enabled,
         "neighborhood_gene_count": config.gene_context.neighborhood_gene_count,
         "require_query_coordinates": config.gene_context.require_query_coordinates,
-        "operon_proxy_max_intergenic_bp": (
-            config.gene_context.operon_proxy_max_intergenic_bp
-        ),
+        "operon_proxy_max_intergenic_bp": (config.gene_context.operon_proxy_max_intergenic_bp),
     }
 
 
@@ -223,6 +227,7 @@ def _excel_context_rows(
         )
     return rows
 
+
 def _excel_operon_rows(
     run_id: str,
     operons: dict[tuple[str, str], OperonEvidence],
@@ -244,16 +249,10 @@ def _excel_operon_rows(
                 "Overlap_BP": operon.overlap_bp,
                 "Intervening_Gene_Count": operon.intervening_gene_count,
                 "Transcriptional_Order": operon.transcriptional_order,
-                "Maximum_Intergenic_Distance_BP": (
-                    operon.maximum_intergenic_distance_bp
-                ),
+                "Maximum_Intergenic_Distance_BP": (operon.maximum_intergenic_distance_bp),
                 "Passes_Distance_Threshold": operon.passes_distance_threshold,
-                "Supporting_Conditions": "|".join(
-                    operon.supporting_conditions
-                ),
-                "Conflicting_Conditions": "|".join(
-                    operon.conflicting_conditions
-                ),
+                "Supporting_Conditions": "|".join(operon.supporting_conditions),
+                "Conflicting_Conditions": "|".join(operon.conflicting_conditions),
                 "Rule_Version": operon.calculation_rule_version,
                 "Rule_ID": operon.proxy_rule_id,
                 "Warnings": "|".join(operon.warnings),
@@ -266,6 +265,7 @@ def _excel_operon_rows(
 
     return rows
 
+
 def _excel_domain_rows(
     run_id: str,
     domain_evidence: dict[
@@ -275,9 +275,7 @@ def _excel_domain_rows(
 ) -> list[dict[str, object]]:
     rows: list[dict[str, object]] = []
 
-    for (query_id, candidate_id), evidence_records in sorted(
-        domain_evidence.items()
-    ):
+    for (query_id, candidate_id), evidence_records in sorted(domain_evidence.items()):
         for evidence in evidence_records:
             rows.append(
                 {
@@ -298,29 +296,20 @@ def _excel_domain_rows(
                     "Query_Protein_ID": evidence.paired_protein_id,
                     "Query_Accession": evidence.paired_accession,
                     "Is_Shared": evidence.is_shared,
-                    "Support_Terms": "|".join(
-                        evidence.support_terms
-                    ),
-                    "Conflicting_Terms": "|".join(
-                        evidence.conflicting_terms
-                    ),
-                    "Rule_Version": (
-                        evidence.calculation_rule_version
-                    ),
+                    "Support_Terms": "|".join(evidence.support_terms),
+                    "Conflicting_Terms": "|".join(evidence.conflicting_terms),
+                    "Rule_Version": (evidence.calculation_rule_version),
                     "Ruleset_Path": evidence.ruleset_path,
                     "Warnings": "|".join(evidence.warnings),
                     "Provenance": "|".join(
-                        (
-                            f"{item.source_name}:"
-                            f"{item.source_version or ''}:"
-                            f"{item.method or ''}"
-                        )
+                        (f"{item.source_name}:{item.source_version or ''}:{item.method or ''}")
                         for item in evidence.provenance
                     ),
                 }
             )
 
     return rows
+
 
 def _excel_functional_rows(
     run_id: str,
@@ -331,9 +320,7 @@ def _excel_functional_rows(
 ) -> list[dict[str, object]]:
     rows: list[dict[str, object]] = []
 
-    for (query_id, candidate_id), evidence_records in sorted(
-        functional_evidence.items()
-    ):
+    for (query_id, candidate_id), evidence_records in sorted(functional_evidence.items()):
         for evidence in evidence_records:
             rows.append(
                 {
@@ -346,41 +333,24 @@ def _excel_functional_rows(
                     "Candidate_Role": evidence.candidate_role,
                     "Relationship_Hint": evidence.relationship_hint,
                     "Rule_ID": evidence.rule_id,
-                    "Query_Matched_Terms": "|".join(
-                        evidence.query_matched_terms
-                    ),
-                    "Candidate_Matched_Terms": "|".join(
-                        evidence.candidate_matched_terms
-                    ),
-                    "Support_Terms": "|".join(
-                        evidence.support_terms
-                    ),
-                    "Conflicting_Terms": "|".join(
-                        evidence.conflicting_terms
-                    ),
-                    "Query_Annotation_Text": (
-                        evidence.query_annotation_text
-                    ),
-                    "Candidate_Annotation_Text": (
-                        evidence.candidate_annotation_text
-                    ),
-                    "Rule_Version": (
-                        evidence.calculation_rule_version
-                    ),
+                    "Query_Matched_Terms": "|".join(evidence.query_matched_terms),
+                    "Candidate_Matched_Terms": "|".join(evidence.candidate_matched_terms),
+                    "Support_Terms": "|".join(evidence.support_terms),
+                    "Conflicting_Terms": "|".join(evidence.conflicting_terms),
+                    "Query_Annotation_Text": (evidence.query_annotation_text),
+                    "Candidate_Annotation_Text": (evidence.candidate_annotation_text),
+                    "Rule_Version": (evidence.calculation_rule_version),
                     "Ruleset_Path": evidence.ruleset_path,
                     "Warnings": "|".join(evidence.warnings),
                     "Provenance": "|".join(
-                        (
-                            f"{item.source_name}:"
-                            f"{item.source_version or ''}:"
-                            f"{item.method or ''}"
-                        )
+                        (f"{item.source_name}:{item.source_version or ''}:{item.method or ''}")
                         for item in evidence.provenance
                     ),
                 }
             )
 
     return rows
+
 
 def _excel_localization_rows(
     run_id: str,
@@ -391,9 +361,7 @@ def _excel_localization_rows(
 ) -> list[dict[str, object]]:
     rows: list[dict[str, object]] = []
 
-    for (query_id, candidate_id), evidence in sorted(
-        localization_evidence.items()
-    ):
+    for (query_id, candidate_id), evidence in sorted(localization_evidence.items()):
         rows.append(
             {
                 "Run_ID": run_id,
@@ -406,43 +374,76 @@ def _excel_localization_rows(
                 "Compartment": evidence.compartment,
                 "Compatibility": evidence.compatibility,
                 "Signal_Peptide": evidence.signal_peptide,
-                "Transmembrane_Helices": (
-                    evidence.transmembrane_helices
-                ),
+                "Transmembrane_Helices": (evidence.transmembrane_helices),
                 "Topology": evidence.topology,
-                "Localization_Annotation": (
-                    evidence.localization_annotation
-                ),
-                "Transmembrane_Annotation": (
-                    evidence.transmembrane_annotation
-                ),
-                "Matched_Terms": "|".join(
-                    evidence.matched_terms
-                ),
-                "Conflicting_Terms": "|".join(
-                    evidence.conflicting_terms
-                ),
+                "Localization_Annotation": (evidence.localization_annotation),
+                "Transmembrane_Annotation": (evidence.transmembrane_annotation),
+                "Matched_Terms": "|".join(evidence.matched_terms),
+                "Conflicting_Terms": "|".join(evidence.conflicting_terms),
                 "Rule_ID": evidence.rule_id,
-                "Rule_Version": (
-                    evidence.calculation_rule_version
-                ),
+                "Rule_Version": (evidence.calculation_rule_version),
                 "Annotation_Source": evidence.annotation_source,
-                "Annotation_Confidence": (
-                    evidence.annotation_confidence
-                ),
+                "Annotation_Confidence": (evidence.annotation_confidence),
                 "Warnings": "|".join(evidence.warnings),
                 "Provenance": "|".join(
-                    (
-                        f"{item.source_name}:"
-                        f"{item.source_version or ''}:"
-                        f"{item.method or ''}"
-                    )
+                    (f"{item.source_name}:{item.source_version or ''}:{item.method or ''}")
                     for item in evidence.provenance
                 ),
             }
         )
 
     return rows
+
+
+def _excel_orthology_rows(
+    run_id: str,
+    orthology_evidence: dict[
+        tuple[str, str],
+        list[OrthologRecord],
+    ],
+) -> list[dict[str, object]]:
+    rows: list[dict[str, object]] = []
+
+    for (query_id, candidate_id), evidence_records in sorted(orthology_evidence.items()):
+        for evidence in evidence_records:
+            rows.append(
+                {
+                    "Run_ID": run_id,
+                    "Query_ID": query_id,
+                    "Candidate_ID": candidate_id,
+                    "Status": evidence.status,
+                    "Protein_ID": evidence.protein_id,
+                    "Reference_ID": evidence.reference_id,
+                    "Ortholog_ID": evidence.ortholog_id,
+                    "Identity": evidence.identity,
+                    "Query_Coverage": evidence.query_coverage,
+                    "Subject_Coverage": evidence.subject_coverage,
+                    "Evalue": evidence.evalue,
+                    "Orthogroup": evidence.orthogroup,
+                    "Paralog_Ambiguity": evidence.paralog_ambiguity,
+                    "Reference_Organism": evidence.reference_organism,
+                    "Relationship": evidence.relationship,
+                    "Paired_Protein_ID": evidence.paired_protein_id,
+                    "Paired_Reference_ID": evidence.paired_reference_id,
+                    "Paired_Ortholog_ID": evidence.paired_ortholog_id,
+                    "Paired_Orthogroup": evidence.paired_orthogroup,
+                    "Shared_Orthogroup": evidence.shared_orthogroup,
+                    "Pair_Supported": evidence.pair_supported,
+                    "Support_Terms": "|".join(evidence.support_terms),
+                    "Conflicting_Terms": "|".join(evidence.conflicting_terms),
+                    "Rule_Version": evidence.calculation_rule_version,
+                    "Source": evidence.source,
+                    "Source_Record_ID": evidence.source_record_id,
+                    "Warnings": "|".join(evidence.warnings),
+                    "Provenance": "|".join(
+                        f"{item.source_name}:{item.source_version or ''}:{item.method or ''}"
+                        for item in evidence.provenance
+                    ),
+                }
+            )
+
+    return rows
+
 
 class InteractionCandidatePipeline:
     """Generate auditable candidates and coordinate-derived context without scoring."""
@@ -461,13 +462,8 @@ class InteractionCandidatePipeline:
         coordinates = document.features
         annotations: list[AnnotationRecord] = []
         if config.input.annotation_table is not None:
-            annotations = LocalAnnotationTsvLoader().load(
-                config.input.annotation_table
-            )
-        annotation_by_protein = {
-            annotation.protein_id: annotation
-            for annotation in annotations
-        }
+            annotations = LocalAnnotationTsvLoader().load(config.input.annotation_table)
+        annotation_by_protein = {annotation.protein_id: annotation for annotation in annotations}
         generated = generate_candidates(
             proteins=proteins,
             coordinates=coordinates,
@@ -504,6 +500,41 @@ class InteractionCandidatePipeline:
                     config.gene_context.operon_proxy_max_intergenic_bp,
                 )
 
+        orthology_evidence: dict[
+            tuple[str, str],
+            list[OrthologRecord],
+        ] = {}
+
+        if config.orthology.enabled:
+            if config.orthology.source != "local_table":
+                raise InputValidationError(
+                    "orthology.source must be 'local_table' "
+                    "when orthology.enabled is true in MVP-1G"
+                )
+
+            orthology_table_path = config.orthology.local_table
+
+            if orthology_table_path is None:
+                raise InputValidationError(
+                    "orthology.local_table is required when orthology.enabled is true"
+                )
+
+            orthology_records = LocalOrthologyTsvLoader().load(orthology_table_path)
+            orthology_index = build_orthology_index(orthology_records)
+
+            for candidate in generated.candidates:
+                pair = (
+                    candidate.query_id,
+                    candidate.protein_id,
+                )
+                query_protein_id = canonical_query_ids[candidate.query_id]
+
+                orthology_evidence[pair] = evaluate_orthology_pair(
+                    query_protein_id,
+                    candidate.protein_id,
+                    orthology_index,
+                )
+
         domain_evidence: dict[
             tuple[str, str],
             list[DomainEvidence],
@@ -512,8 +543,7 @@ class InteractionCandidatePipeline:
         if config.domains.enabled:
             if config.domains.source != "local_table":
                 raise InputValidationError(
-                    "domains.source must be 'local_table' "
-                    "when domains.enabled is true"
+                    "domains.source must be 'local_table' when domains.enabled is true"
                 )
 
             domain_table_path = config.domains.local_table
@@ -521,22 +551,16 @@ class InteractionCandidatePipeline:
 
             if domain_table_path is None:
                 raise InputValidationError(
-                    "domains.local_table is required "
-                    "when domains.enabled is true"
+                    "domains.local_table is required when domains.enabled is true"
                 )
 
             if domain_rules_path is None:
                 raise InputValidationError(
-                    "domains.rules_path is required "
-                    "when domains.enabled is true"
+                    "domains.rules_path is required when domains.enabled is true"
                 )
 
-            domain_records = LocalDomainTsvLoader().load(
-                domain_table_path
-            )
-            domain_rules = LocalDomainRulesLoader().load(
-                domain_rules_path
-            )
+            domain_records = LocalDomainTsvLoader().load(domain_table_path)
+            domain_rules = LocalDomainRulesLoader().load(domain_rules_path)
             domain_index = build_domain_index(domain_records)
 
             for candidate in generated.candidates:
@@ -544,9 +568,7 @@ class InteractionCandidatePipeline:
                     candidate.query_id,
                     candidate.protein_id,
                 )
-                query_protein_id = canonical_query_ids[
-                    candidate.query_id
-                ]
+                query_protein_id = canonical_query_ids[candidate.query_id]
 
                 domain_evidence[pair] = evaluate_domain_pairs(
                     query_protein_id,
@@ -569,12 +591,9 @@ class InteractionCandidatePipeline:
                     "when functional_complementarity.enabled is true"
                 )
 
-            functional_rules = LocalFunctionalRulesLoader().load(
-                rules_path
-            )
+            functional_rules = LocalFunctionalRulesLoader().load(rules_path)
             description_by_protein = {
-                protein.protein_id: protein.description
-                for protein in proteins
+                protein.protein_id: protein.description for protein in proteins
             }
 
             for candidate in generated.candidates:
@@ -582,9 +601,7 @@ class InteractionCandidatePipeline:
                     candidate.query_id,
                     candidate.protein_id,
                 )
-                query_protein_id = canonical_query_ids[
-                    candidate.query_id
-                ]
+                query_protein_id = canonical_query_ids[candidate.query_id]
 
                 query_text = _functional_annotation_text(
                     query_protein_id,
@@ -597,13 +614,11 @@ class InteractionCandidatePipeline:
                     description_by_protein,
                 )
 
-                functional_evidence[pair] = (
-                    evaluate_functional_complementarity(
-                        query_text,
-                        candidate_text,
-                        functional_rules,
-                        rules_path,
-                    )
+                functional_evidence[pair] = evaluate_functional_complementarity(
+                    query_text,
+                    candidate_text,
+                    functional_rules,
+                    rules_path,
                 )
 
         localization_evidence: dict[
@@ -623,9 +638,7 @@ class InteractionCandidatePipeline:
                     candidate.query_id,
                     candidate.protein_id,
                 )
-                query_protein_id = canonical_query_ids[
-                    candidate.query_id
-                ]
+                query_protein_id = canonical_query_ids[candidate.query_id]
 
                 localization_evidence[pair] = evaluate_localization(
                     query_protein_id,
@@ -656,72 +669,42 @@ class InteractionCandidatePipeline:
             domains = domain_evidence.get(pair, [])
             functional = functional_evidence.get(pair, [])
             localization = localization_evidence.get(pair)
+            orthology = orthology_evidence.get(pair, [])
 
-            statuses = {
-                engine: EvidenceStatus.NOT_RUN
-                for engine in _UNIMPLEMENTED_ENGINES
-            }
-            statuses["gene_context"] = (
-                context.status
-                if context
-                else EvidenceStatus.NOT_RUN
-            )
-            statuses["operon"] = (
-                operon.status
-                if operon
-                else EvidenceStatus.NOT_RUN
-            )
-            statuses["domains"] = (
-                domains[0].status
-                if domains
-                else EvidenceStatus.NOT_RUN
-            )
+            statuses = {engine: EvidenceStatus.NOT_RUN for engine in _UNIMPLEMENTED_ENGINES}
+            statuses["gene_context"] = context.status if context else EvidenceStatus.NOT_RUN
+            statuses["operon"] = operon.status if operon else EvidenceStatus.NOT_RUN
+            statuses["domains"] = domains[0].status if domains else EvidenceStatus.NOT_RUN
             statuses["functional_complementarity"] = (
-                functional[0].status
-                if functional
-                else EvidenceStatus.NOT_RUN
+                functional[0].status if functional else EvidenceStatus.NOT_RUN
             )
             statuses["localization"] = (
-                localization.status
-                if localization
-                else EvidenceStatus.NOT_RUN
+                localization.status if localization else EvidenceStatus.NOT_RUN
             )
+            statuses["orthology"] = orthology[0].status if orthology else EvidenceStatus.NOT_RUN
 
             context_warnings = context.warnings if context else []
             operon_warnings = operon.warnings if operon else []
-            domain_warnings = [
-                warning
-                for evidence in domains
-                for warning in evidence.warnings
-            ]
+            domain_warnings = [warning for evidence in domains for warning in evidence.warnings]
             functional_warnings = [
-                warning
-                for evidence in functional
-                for warning in evidence.warnings
+                warning for evidence in functional for warning in evidence.warnings
             ]
-            localization_warnings = (
-                localization.warnings
-                if localization
-                else []
-            )
-
+            localization_warnings = localization.warnings if localization else []
+            orthology_warnings = [
+                warning for evidence in orthology for warning in evidence.warnings
+            ]
             bundles.append(
                 CandidateEvidenceBundle(
                     domains=domains,
                     functional=functional,
-                    localization=(
-                         [localization]
-                         if localization
-                         else []
-                    ),
+                    localization=([localization] if localization else []),
+                    orthology=orthology,
                     run_id=run_id,
                     query_id=candidate.query_id,
                     candidate_id=candidate.protein_id,
                     candidate=candidate,
                     candidate_disposition=candidate.disposition,
-                    predicted_relationship_type=(
-                        PredictedRelationshipType.INSUFFICIENT_EVIDENCE
-                    ),
+                    predicted_relationship_type=(PredictedRelationshipType.INSUFFICIENT_EVIDENCE),
                     genome_context=[context] if context else [],
                     operon=[operon] if operon else [],
                     engine_statuses=statuses,
@@ -735,6 +718,7 @@ class InteractionCandidatePipeline:
                             + domain_warnings
                             + functional_warnings
                             + localization_warnings
+                            + orthology_warnings
                         )
                     ),
                 )
@@ -751,6 +735,7 @@ class InteractionCandidatePipeline:
             domains=domain_evidence,
             localization=localization_evidence,
             functional=functional_evidence,
+            orthology=orthology_evidence,
         )
         all_warnings = [warning for bundle in bundles for warning in bundle.warnings]
         warning_summary_path = WarningSummaryTsvWriter().write(
@@ -775,6 +760,10 @@ class InteractionCandidatePipeline:
                         run_id,
                         localization_evidence,
                     ),
+                    "Orthology_Evidence": _excel_orthology_rows(
+                        run_id,
+                        orthology_evidence,
+                    ),
                 },
             )
         input_files = [
@@ -785,6 +774,12 @@ class InteractionCandidatePipeline:
             input_files.append(
                 build_input_file_manifest(
                     "annotation_table", config.input.annotation_table, required=False
+                )
+            )
+        if config.orthology.enabled and config.orthology.local_table is not None:
+            input_files.append(
+                build_input_file_manifest(
+                    "orthology_local_table", config.orthology.local_table, required=True
                 )
             )
         manifest = build_run_manifest(
@@ -803,26 +798,23 @@ class InteractionCandidatePipeline:
         manifest.gene_context_rule_version = (
             GENE_CONTEXT_RULE_VERSION if config.gene_context.enabled else None
         )
+        manifest.orthology_rule_version = (
+            ORTHOLOGY_ENGINE_VERSION if config.orthology.enabled else None
+        )
 
         if config.gene_context.enabled:
-            manifest.policy_settings["operon_proxy_rule_version"] = (
-                OPERON_PROXY_RULE_VERSION
-            )
+            manifest.policy_settings["operon_proxy_rule_version"] = OPERON_PROXY_RULE_VERSION
 
         if config.functional_complementarity.enabled:
-            manifest.policy_settings[
-                "functional_complementarity_rule_version"
-            ] = FUNCTIONAL_COMPLEMENTARITY_ENGINE_VERSION
+            manifest.policy_settings["functional_complementarity_rule_version"] = (
+                FUNCTIONAL_COMPLEMENTARITY_ENGINE_VERSION
+            )
 
         if config.domains.enabled:
-            manifest.policy_settings[
-                "domain_pair_rule_version"
-            ] = DOMAIN_PAIR_ENGINE_VERSION
+            manifest.policy_settings["domain_pair_rule_version"] = DOMAIN_PAIR_ENGINE_VERSION
 
         if config.localization.enabled:
-            manifest.policy_settings[
-                "localization_rule_version"
-            ] = LOCALIZATION_ENGINE_VERSION
+            manifest.policy_settings["localization_rule_version"] = LOCALIZATION_ENGINE_VERSION
 
         manifest.policy_settings = policies | manifest.policy_settings
         manifest.warnings = sorted(set(all_warnings))
@@ -836,9 +828,7 @@ class InteractionCandidatePipeline:
             f"{engine}_not_run" for engine in _UNIMPLEMENTED_ENGINES
         ]
         if not config.gene_context.enabled:
-            manifest.incomplete_evidence_flags.extend(
-                ["gene_context_not_run", "operon_not_run"]
-            )
+            manifest.incomplete_evidence_flags.extend(["gene_context_not_run", "operon_not_run"])
         manifest_path = JsonRunManifestWriter().write(manifest, output_path / "run_manifest.json")
         disposition_counts = {
             disposition: sum(

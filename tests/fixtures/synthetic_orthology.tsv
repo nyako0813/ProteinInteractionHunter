@@ -1,0 +1,5 @@
+protein_id	reference_id	ortholog_id	reference_organism	identity	query_coverage	subject_coverage	evalue	orthogroup	relationship	paralog_ambiguity	source	source_record_id
+QUERY_001	ref_archaea	REF_QUERY_001	Methanosarcina mazei	0.84	0.95	0.93	1e-60	OG0001	reciprocal_best_hit	false	synthetic_local_table	query-row-1
+NEAR_001	ref_archaea	REF_NEAR_001	Methanosarcina mazei	0.72	0.91	0.88	1e-40	OG0001	reciprocal_best_hit	false	synthetic_local_table	near-row-1
+MEM_001	ref_archaea	REF_MEM_001	Methanosarcina mazei	0.61	0.87	0.82	1e-25	OG0002	one_way_best_hit	false	synthetic_local_table	mem-row-1
+PARA_001	ref_archaea	REF_PARA_001	Methanosarcina mazei	0.79	0.90	0.89	1e-45	OG0001	ambiguous_best_hit	true	synthetic_local_table	para-row-1

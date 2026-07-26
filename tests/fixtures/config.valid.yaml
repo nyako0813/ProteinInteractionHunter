@@ -24,9 +24,11 @@ gene_context:
   operon_proxy_max_intergenic_bp: 200
   require_query_coordinates: false
 orthology:
-  enabled: false
+  enabled: true
+  source: local_table
   engine: blast
-  database: null
+  database:
+  local_table: synthetic_orthology.tsv
 phylogenetic_profile:
   enabled: false
 domains:

@@ -2187,6 +2187,26 @@
     "OrthologRecord": {
       "additionalProperties": false,
       "properties": {
+        "calculation_rule_version": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Calculation Rule Version"
+        },
+        "conflicting_terms": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Conflicting Terms",
+          "type": "array"
+        },
         "evalue": {
           "anyOf": [
             {
@@ -2244,6 +2264,70 @@
           "default": null,
           "title": "Ortholog Id"
         },
+        "pair_supported": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Pair Supported"
+        },
+        "paired_orthogroup": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Paired Orthogroup"
+        },
+        "paired_ortholog_id": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Paired Ortholog Id"
+        },
+        "paired_protein_id": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Paired Protein Id"
+        },
+        "paired_reference_id": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Paired Reference Id"
+        },
         "paralog_ambiguity": {
           "default": false,
           "title": "Paralog Ambiguity",
@@ -2294,6 +2378,70 @@
           "title": "Reference Id",
           "type": "string"
         },
+        "reference_organism": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reference Organism"
+        },
+        "relationship": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Relationship"
+        },
+        "shared_orthogroup": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Shared Orthogroup"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source"
+        },
+        "source_record_id": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Record Id"
+        },
         "status": {
           "$ref": "#/$defs/EvidenceStatus",
           "default": "not_run"
@@ -2311,6 +2459,13 @@
           ],
           "default": null,
           "title": "Subject Coverage"
+        },
+        "support_terms": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Support Terms",
+          "type": "array"
         },
         "warnings": {
           "items": {

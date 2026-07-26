@@ -1,6 +1,7 @@
 """MVP-1B pipeline policy and alias behavior."""
 
 from pathlib import Path
+from typing import Any
 
 import pytest
 import yaml
@@ -14,38 +15,30 @@ def config_copy(
     source: Path,
     tmp_path: Path,
     name: str,
-) -> tuple[dict[str, object], Path]:
+) -> tuple[dict[str, Any], Path]:
     raw = yaml.safe_load(source.read_text(encoding="utf-8"))
     fixture_dir = source.parent
 
-    raw["input"]["proteome_fasta"] = str(
-        (fixture_dir / raw["input"]["proteome_fasta"]).resolve()
-    )
-    raw["input"]["genome_gff"] = str(
-        (fixture_dir / raw["input"]["genome_gff"]).resolve()
-    )
+    raw["input"]["proteome_fasta"] = str((fixture_dir / raw["input"]["proteome_fasta"]).resolve())
+    raw["input"]["genome_gff"] = str((fixture_dir / raw["input"]["genome_gff"]).resolve())
 
     annotation_table = raw["input"].get("annotation_table")
     if annotation_table is not None:
-        raw["input"]["annotation_table"] = str(
-            (fixture_dir / annotation_table).resolve()
-        )
+        raw["input"]["annotation_table"] = str((fixture_dir / annotation_table).resolve())
 
     domain_table = raw["domains"].get("local_table")
     if domain_table is not None:
-        raw["domains"]["local_table"] = str(
-            (fixture_dir / domain_table).resolve()
-        )
+        raw["domains"]["local_table"] = str((fixture_dir / domain_table).resolve())
+
+    orthology_table = raw["orthology"].get("local_table")
+    if orthology_table is not None:
+        raw["orthology"]["local_table"] = str((fixture_dir / orthology_table).resolve())
 
     domain_rules_path = raw["domains"].get("rules_path")
     if domain_rules_path is not None:
-        raw["domains"]["rules_path"] = str(
-            (fixture_dir / domain_rules_path).resolve()
-        )
+        raw["domains"]["rules_path"] = str((fixture_dir / domain_rules_path).resolve())
 
-    functional_rules_path = raw[
-        "functional_complementarity"
-    ].get("rules_path")
+    functional_rules_path = raw["functional_complementarity"].get("rules_path")
     if functional_rules_path is not None:
         raw["functional_complementarity"]["rules_path"] = str(
             (fixture_dir / functional_rules_path).resolve()
@@ -54,7 +47,7 @@ def config_copy(
     return raw, tmp_path / f"{name}.yaml"
 
 
-def write_config(raw: dict, path: Path) -> Path:
+def write_config(raw: dict[str, Any], path: Path) -> Path:
     path.write_text(yaml.safe_dump(raw, sort_keys=True), encoding="utf-8")
     return path
 

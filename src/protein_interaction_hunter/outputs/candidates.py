@@ -13,6 +13,7 @@ from protein_interaction_hunter.models.evidence import (
     GenomeContextEvidence,
     LocalizationEvidence,
     OperonEvidence,
+    OrthologRecord,
 )
 from protein_interaction_hunter.models.protein import CandidateProtein
 
@@ -117,6 +118,21 @@ CANDIDATE_COLUMNS = (
     "domain_conflicting_terms",
     "domain_rule_versions",
     "domain_warnings",
+    "orthology_status",
+    "orthology_reference_organism",
+    "orthology_relationship",
+    "orthology_paired_protein_id",
+    "orthology_paired_reference_id",
+    "orthology_paired_ortholog_id",
+    "orthology_paired_orthogroup",
+    "orthology_shared_orthogroup",
+    "orthology_pair_supported",
+    "orthology_support_terms",
+    "orthology_conflicting_terms",
+    "orthology_rule_version",
+    "orthology_source",
+    "orthology_source_record_id",
+    "orthology_warnings",
 )
 
 
@@ -129,8 +145,9 @@ def _value(value: Any) -> Any:
         return ""
     return value.value if hasattr(value, "value") else value
 
+
 def _evidence_values(
-    evidence: Sequence[DomainEvidence | FunctionalEvidence],
+    evidence: Sequence[DomainEvidence | FunctionalEvidence | OrthologRecord],
     attribute: str,
 ) -> str:
     values: set[str] = set()
@@ -180,6 +197,11 @@ class CandidateTableTsvWriter:
             Sequence[FunctionalEvidence],
         ]
         | None = None,
+        orthology: Mapping[
+            tuple[str, str],
+            Sequence[OrthologRecord],
+        ]
+        | None = None,
     ) -> Path:
         output_path = path.expanduser().resolve()
         output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -193,6 +215,7 @@ class CandidateTableTsvWriter:
         domain_map = domains or {}
         localization_map = localization or {}
         functional_map = functional or {}
+        orthology_map = orthology or {}
         for candidate in sorted(candidates, key=lambda item: (item.query_id, item.protein_id)):
             pair = (candidate.query_id, candidate.protein_id)
             context = context_map.get(pair)
@@ -200,6 +223,7 @@ class CandidateTableTsvWriter:
             domain_records = domain_map.get(pair, ())
             localization_record = localization_map.get(pair)
             functional_records = functional_map.get(pair, ())
+            orthology_records = orthology_map.get(pair, ())
             writer.writerow(
                 {
                     "run_id": run_id,
@@ -273,24 +297,14 @@ class CandidateTableTsvWriter:
                     ),
                     "gene_context_warnings": _list(context.warnings) if context else "",
                     "operon_status": _value(operon.status if operon else None),
-                    "operon_proxy_status": _value(
-                        operon.proxy_status if operon else None
-                    ),
-                    "operon_same_contig": _value(
-                        operon.same_contig if operon else None
-                    ),
-                    "operon_same_strand": _value(
-                        operon.same_strand if operon else None
-                    ),
-                    "operon_is_adjacent": _value(
-                        operon.is_adjacent if operon else None
-                    ),
+                    "operon_proxy_status": _value(operon.proxy_status if operon else None),
+                    "operon_same_contig": _value(operon.same_contig if operon else None),
+                    "operon_same_strand": _value(operon.same_strand if operon else None),
+                    "operon_is_adjacent": _value(operon.is_adjacent if operon else None),
                     "operon_intergenic_distance_bp": _value(
                         operon.intergenic_distance_bp if operon else None
                     ),
-                    "operon_overlap_bp": _value(
-                        operon.overlap_bp if operon else None
-                    ),
+                    "operon_overlap_bp": _value(operon.overlap_bp if operon else None),
                     "operon_intervening_gene_count": _value(
                         operon.intervening_gene_count if operon else None
                     ),
@@ -312,58 +326,38 @@ class CandidateTableTsvWriter:
                     "operon_rule_version": _value(
                         operon.calculation_rule_version if operon else None
                     ),
-                    "operon_rule_id": _value(
-                        operon.proxy_rule_id if operon else None
-                    ),
+                    "operon_rule_id": _value(operon.proxy_rule_id if operon else None),
                     "operon_warnings": _list(operon.warnings) if operon else "",
                     "domain_status": _evidence_values(
                         domain_records,
                         "status",
                     ),
-                                        "localization_status": _value(
-                        localization_record.status
-                        if localization_record
-                        else None
+                    "localization_status": _value(
+                        localization_record.status if localization_record else None
                     ),
                     "localization_compartment": _value(
-                        localization_record.compartment
-                        if localization_record
-                        else None
+                        localization_record.compartment if localization_record else None
                     ),
                     "localization_query_compartment": _value(
-                        localization_record.query_compartment
-                        if localization_record
-                        else None
+                        localization_record.query_compartment if localization_record else None
                     ),
                     "localization_compatibility": _value(
-                        localization_record.compatibility
-                        if localization_record
-                        else None
+                        localization_record.compatibility if localization_record else None
                     ),
                     "localization_signal_peptide": _value(
-                        localization_record.signal_peptide
-                        if localization_record
-                        else None
+                        localization_record.signal_peptide if localization_record else None
                     ),
                     "localization_tm_helices": _value(
-                        localization_record.transmembrane_helices
-                        if localization_record
-                        else None
+                        localization_record.transmembrane_helices if localization_record else None
                     ),
                     "localization_topology": _value(
-                        localization_record.topology
-                        if localization_record
-                        else None
+                        localization_record.topology if localization_record else None
                     ),
                     "localization_matched_terms": (
-                        _list(localization_record.matched_terms)
-                        if localization_record
-                        else ""
+                        _list(localization_record.matched_terms) if localization_record else ""
                     ),
                     "localization_conflicting_terms": (
-                        _list(localization_record.conflicting_terms)
-                        if localization_record
-                        else ""
+                        _list(localization_record.conflicting_terms) if localization_record else ""
                     ),
                     "localization_rule_version": _value(
                         localization_record.calculation_rule_version
@@ -371,19 +365,13 @@ class CandidateTableTsvWriter:
                         else None
                     ),
                     "localization_annotation_source": _value(
-                        localization_record.annotation_source
-                        if localization_record
-                        else None
+                        localization_record.annotation_source if localization_record else None
                     ),
                     "localization_annotation_confidence": _value(
-                        localization_record.annotation_confidence
-                        if localization_record
-                        else None
+                        localization_record.annotation_confidence if localization_record else None
                     ),
                     "localization_warnings": (
-                        _list(localization_record.warnings)
-                        if localization_record
-                        else ""
+                        _list(localization_record.warnings) if localization_record else ""
                     ),
                     "domain_pair_matched": _evidence_values(
                         domain_records,
@@ -471,6 +459,66 @@ class CandidateTableTsvWriter:
                     ),
                     "functional_warnings": _evidence_values(
                         functional_records,
+                        "warnings",
+                    ),
+                    "orthology_status": _evidence_values(
+                        orthology_records,
+                        "status",
+                    ),
+                    "orthology_reference_organism": _evidence_values(
+                        orthology_records,
+                        "reference_organism",
+                    ),
+                    "orthology_relationship": _evidence_values(
+                        orthology_records,
+                        "relationship",
+                    ),
+                    "orthology_paired_protein_id": _evidence_values(
+                        orthology_records,
+                        "paired_protein_id",
+                    ),
+                    "orthology_paired_reference_id": _evidence_values(
+                        orthology_records,
+                        "paired_reference_id",
+                    ),
+                    "orthology_paired_ortholog_id": _evidence_values(
+                        orthology_records,
+                        "paired_ortholog_id",
+                    ),
+                    "orthology_paired_orthogroup": _evidence_values(
+                        orthology_records,
+                        "paired_orthogroup",
+                    ),
+                    "orthology_shared_orthogroup": _evidence_values(
+                        orthology_records,
+                        "shared_orthogroup",
+                    ),
+                    "orthology_pair_supported": _evidence_values(
+                        orthology_records,
+                        "pair_supported",
+                    ),
+                    "orthology_support_terms": _evidence_values(
+                        orthology_records,
+                        "support_terms",
+                    ),
+                    "orthology_conflicting_terms": _evidence_values(
+                        orthology_records,
+                        "conflicting_terms",
+                    ),
+                    "orthology_rule_version": _evidence_values(
+                        orthology_records,
+                        "calculation_rule_version",
+                    ),
+                    "orthology_source": _evidence_values(
+                        orthology_records,
+                        "source",
+                    ),
+                    "orthology_source_record_id": _evidence_values(
+                        orthology_records,
+                        "source_record_id",
+                    ),
+                    "orthology_warnings": _evidence_values(
+                        orthology_records,
                         "warnings",
                     ),
                 }

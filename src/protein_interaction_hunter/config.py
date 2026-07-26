@@ -61,8 +61,10 @@ class GeneContextConfig(StrictModel):
 
 class OrthologyConfig(StrictModel):
     enabled: bool = False
+    source: Literal["computed", "local_table"] = "computed"
     engine: Literal["blast", "diamond"] = "blast"
     database: Path | None = None
+    local_table: Path | None = None
 
 
 class EnabledConfig(StrictModel):
@@ -170,6 +172,10 @@ def resolve_config_paths(config: AppConfig, base_directory: Path) -> AppConfig:
     ]
     data["orthology"]["database"] = _resolve(
         data["orthology"]["database"],
+        base_directory,
+    )
+    data["orthology"]["local_table"] = _resolve(
+        data["orthology"]["local_table"],
         base_directory,
     )
 

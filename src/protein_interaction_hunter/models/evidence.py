@@ -99,6 +99,7 @@ class OperonEvidence(BaseEvidence):
 
 
 class OrthologRecord(BaseEvidence):
+    calculation_rule_version: NonEmptyStr | None = None
     protein_id: NonEmptyStr
     reference_id: NonEmptyStr
     ortholog_id: NonEmptyStr | None = None
@@ -108,6 +109,18 @@ class OrthologRecord(BaseEvidence):
     evalue: float | None = Field(default=None, ge=0.0)
     orthogroup: NonEmptyStr | None = None
     paralog_ambiguity: bool = False
+    reference_organism: NonEmptyStr | None = None
+    relationship: NonEmptyStr | None = None
+    paired_protein_id: NonEmptyStr | None = None
+    paired_reference_id: NonEmptyStr | None = None
+    paired_ortholog_id: NonEmptyStr | None = None
+    paired_orthogroup: NonEmptyStr | None = None
+    shared_orthogroup: bool | None = None
+    pair_supported: bool | None = None
+    support_terms: list[str] = Field(default_factory=list)
+    conflicting_terms: list[str] = Field(default_factory=list)
+    source: NonEmptyStr | None = None
+    source_record_id: NonEmptyStr | None = None
 
 
 class PhylogeneticProfileEvidence(BaseEvidence):

@@ -54,6 +54,7 @@ class RunManifest(StrictModel):
     incomplete_evidence_flags: list[str] = Field(default_factory=list)
     normalization_rule_version: NonEmptyStr | None = None
     gene_context_rule_version: NonEmptyStr | None = None
+    orthology_rule_version: NonEmptyStr | None = None
     policy_settings: dict[str, str | int | bool] = Field(default_factory=dict)
     parser_warnings: list[str] = Field(default_factory=list)
 
