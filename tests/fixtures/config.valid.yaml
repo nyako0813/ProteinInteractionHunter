@@ -72,10 +72,31 @@ known_interactions:
   external_services: []
 scoring:
   enabled: false
-  deterministic_tie_breaker:
-    - total_ranking_score
-    - evidence_completeness
-    - candidate_id
+  rule_version: mvp1k-integrated-scoring-v1
+  output_scale: 100.0
+  minimum_evidence_weight: 1.0
+  minimum_evidence_categories: 2
+  missing_policy: exclude_from_denominator
+  tie_precision: 8
+  weights:
+    genome_context: 1.0
+    operon_proxy: 1.0
+    domain_pair: 1.0
+    functional_complementarity: 1.0
+    localization: 0.5
+    orthology: 0.75
+    phylogenetic_profile: 1.0
+    fusion: 1.5
+    known_interactions: 1.5
+  category_caps:
+    genomic_context: 1.5
+    functional_annotation: 1.5
+    cellular_compatibility: 0.5
+    evolutionary: 2.0
+    direct_interaction: 2.0
+  penalties:
+    contradictory_evidence: 0.25
+    ambiguous_mapping: 0.10
 evidence_tiers:
   enabled: false
 structure_prediction_queue:

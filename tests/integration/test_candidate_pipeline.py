@@ -25,6 +25,7 @@ from protein_interaction_hunter.application.phylogenetic_profile import (
     PHYLOGENETIC_PROFILE_ENGINE_VERSION,
 )
 from protein_interaction_hunter.application.pipeline import InteractionCandidatePipeline
+from protein_interaction_hunter.application.scoring import SCORING_RULE_VERSION
 from protein_interaction_hunter.cli import app
 from protein_interaction_hunter.exceptions import InputValidationError
 from protein_interaction_hunter.models import CandidateEvidenceBundle, EvidenceStatus, RunManifest
@@ -554,3 +555,137 @@ def test_enabled_known_interactions_requires_local_table(
     config.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
     with pytest.raises(InputValidationError, match="known_interactions.local_table is required"):
         InteractionCandidatePipeline().run(config)
+
+
+def test_integrated_scoring_outputs_and_enabled_disabled_ab(
+    valid_config_path: Path,
+    tmp_path: Path,
+) -> None:
+    disabled_dir = tmp_path / "scoring-disabled"
+    disabled_dir.mkdir()
+    disabled_config = e2e_config(valid_config_path, disabled_dir)
+    disabled_result = InteractionCandidatePipeline().run(disabled_config)
+
+    enabled_data = yaml.safe_load(disabled_config.read_text(encoding="utf-8"))
+    enabled_data["scoring"]["enabled"] = True
+    enabled_data["output"]["directory"] = str(tmp_path / "scoring-enabled-output")
+    enabled_config = tmp_path / "scoring-enabled.yaml"
+    enabled_config.write_text(yaml.safe_dump(enabled_data, sort_keys=False), encoding="utf-8")
+    enabled_result = InteractionCandidatePipeline().run(enabled_config)
+
+    assert [item.candidate_id for item in disabled_result.bundles] == [
+        item.candidate_id for item in enabled_result.bundles
+    ]
+    for disabled, enabled in zip(disabled_result.bundles, enabled_result.bundles, strict=True):
+        assert disabled.candidate_disposition == enabled.candidate_disposition
+        assert disabled.predicted_relationship_type == enabled.predicted_relationship_type
+        assert disabled.evidence_tier is None
+        assert enabled.evidence_tier is None
+        assert disabled.genome_context == enabled.genome_context
+        assert disabled.operon == enabled.operon
+        assert disabled.domains == enabled.domains
+        assert disabled.functional == enabled.functional
+        assert disabled.localization == enabled.localization
+        assert disabled.orthology == enabled.orthology
+        assert disabled.phylogenetic_profile == enabled.phylogenetic_profile
+        assert disabled.fusion == enabled.fusion
+        assert disabled.known_interactions == enabled.known_interactions
+        assert disabled.integrated_scoring == []
+        assert disabled.engine_statuses["scoring"] is EvidenceStatus.NOT_RUN
+        assert all(
+            value is None
+            for key, value in disabled.score.model_dump().items()
+            if key.endswith("_score")
+        )
+        assert len(enabled.integrated_scoring) == 1
+        assert enabled.engine_statuses["scoring"] is enabled.integrated_scoring[0].status
+
+    with enabled_result.candidate_table_path.open(encoding="utf-8", newline="") as handle:
+        enabled_rows = list(csv.DictReader(handle, delimiter="	"))
+    with disabled_result.candidate_table_path.open(encoding="utf-8", newline="") as handle:
+        disabled_rows = list(csv.DictReader(handle, delimiter="	"))
+    assert [row["candidate_id"] for row in enabled_rows] == [
+        row["candidate_id"] for row in disabled_rows
+    ]
+    enabled_by_id = {row["candidate_id"]: row for row in enabled_rows}
+    assert enabled_by_id["NEAR_001"]["integrated_score"]
+    assert enabled_by_id["NEAR_001"]["rank"]
+    assert enabled_by_id["NEAR_001"]["score_component_known_interactions"] == "1.0"
+    assert enabled_by_id["MID_001"]["score_component_known_interactions"] == "0.5"
+    assert enabled_by_id["QUERY_001"]["rank"] == ""
+    assert all(row["integrated_score"] == "" for row in disabled_rows)
+    assert all(row["rank"] == "" for row in disabled_rows)
+
+    enabled_bundles = {item.candidate_id: item for item in enabled_result.bundles}
+    near = enabled_bundles["NEAR_001"].integrated_scoring[0]
+    mid = enabled_bundles["MID_001"].integrated_scoring[0]
+    assert near.rank is not None
+    assert mid.rank is not None
+    assert near.output_score is not None
+    assert mid.output_score is not None
+    assert near.output_score > mid.output_score
+    assert near.rank < mid.rank
+    assert sum(
+        component.weighted_contribution or 0.0
+        for component in near.component_scores
+        if component.applied
+    ) == pytest.approx(near.raw_weighted_sum, abs=1e-12)
+
+    manifest = RunManifest.model_validate_json(
+        enabled_result.manifest_path.read_text(encoding="utf-8")
+    )
+    assert manifest.scoring_rule_version == SCORING_RULE_VERSION
+    assert manifest.scoring_config_snapshot["enabled"] is True
+    assert manifest.scoring_config_snapshot["weights"]["fusion"] == 1.5
+    assert manifest.scoring_config_snapshot["missing_policy"] == "exclude_from_denominator"
+    assert "scoring_not_run" not in manifest.incomplete_evidence_flags
+
+    disabled_manifest = RunManifest.model_validate_json(
+        disabled_result.manifest_path.read_text(encoding="utf-8")
+    )
+    assert disabled_manifest.scoring_rule_version is None
+    assert disabled_manifest.scoring_config_snapshot == {}
+    assert "scoring_not_run" in disabled_manifest.incomplete_evidence_flags
+
+    assert enabled_result.excel_path is not None
+    workbook = load_workbook(enabled_result.excel_path, read_only=True, data_only=True)
+    assert "Integrated_Scoring" in workbook.sheetnames
+    assert "Scoring_Components" in workbook.sheetnames
+    integrated_sheet = workbook["Integrated_Scoring"]
+    component_sheet = workbook["Scoring_Components"]
+    assert integrated_sheet.max_row == len(enabled_result.bundles) + 1
+    assert component_sheet.max_row == len(enabled_result.bundles) * 9 + 1
+    workbook.close()
+
+
+def test_omitted_scoring_section_is_disabled_in_pipeline(
+    valid_config_path: Path,
+    tmp_path: Path,
+) -> None:
+    config = e2e_config(valid_config_path, tmp_path)
+    data = yaml.safe_load(config.read_text(encoding="utf-8"))
+    del data["scoring"]
+    config.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
+    result = InteractionCandidatePipeline().run(config)
+    assert all(not bundle.integrated_scoring for bundle in result.bundles)
+    assert all(
+        bundle.engine_statuses["scoring"] is EvidenceStatus.NOT_RUN for bundle in result.bundles
+    )
+    assert all(bundle.evidence_tier is None for bundle in result.bundles)
+
+
+def test_scoring_insufficiency_is_warned_and_not_ranked(
+    valid_config_path: Path,
+    tmp_path: Path,
+) -> None:
+    config = e2e_config(valid_config_path, tmp_path)
+    data = yaml.safe_load(config.read_text(encoding="utf-8"))
+    data["scoring"]["enabled"] = True
+    data["scoring"]["minimum_evidence_categories"] = 6
+    config.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
+    result = InteractionCandidatePipeline().run(config)
+    assert all(not bundle.integrated_scoring[0].sufficient_evidence for bundle in result.bundles)
+    assert all(bundle.integrated_scoring[0].rank is None for bundle in result.bundles)
+    assert "insufficient_evidence_for_formal_score" in (
+        result.warning_summary_path.read_text(encoding="utf-8")
+    )

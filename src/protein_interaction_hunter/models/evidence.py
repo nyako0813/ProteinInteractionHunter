@@ -343,6 +343,67 @@ class KnownInteractionEvidence(BaseEvidence):
     calculation_rule_version: NonEmptyStr | None = None
 
 
+ScoringDirection = Literal["positive", "neutral", "negative", "unknown"]
+
+
+class ScoreComponent(StrictModel):
+    component_name: NonEmptyStr
+    category_name: NonEmptyStr
+    evidence_status: EvidenceStatus
+    raw_value: str | float | int | bool | None = None
+    normalized_value: float | None = Field(default=None, ge=-1.0, le=1.0)
+    configured_weight: float = Field(ge=0.0)
+    effective_weight: float = Field(default=0.0, ge=0.0)
+    weighted_contribution: float | None = None
+    direction: ScoringDirection
+    applied: bool = False
+    exclusion_reason: NonEmptyStr | None = None
+    support_terms: list[str] = Field(default_factory=list)
+    conflicting_terms: list[str] = Field(default_factory=list)
+    source_rule_version: NonEmptyStr | None = None
+    warnings: list[str] = Field(default_factory=list)
+
+
+class ScoreCategory(StrictModel):
+    category_name: NonEmptyStr
+    raw_weighted_sum: float
+    available_weight: float = Field(ge=0.0)
+    normalized_score: float = Field(ge=-1.0, le=1.0)
+    configured_cap: float = Field(gt=0.0)
+
+
+class AppliedScoringPenalty(StrictModel):
+    penalty_name: NonEmptyStr
+    component_name: NonEmptyStr
+    configured_value: float = Field(ge=0.0)
+    explanation: NonEmptyStr
+
+
+class IntegratedScore(BaseEvidence):
+    query_protein_id: NonEmptyStr
+    candidate_protein_id: NonEmptyStr
+    raw_weighted_sum: float
+    available_weight: float = Field(ge=0.0)
+    normalized_score: float | None = Field(default=None, ge=0.0, le=1.0)
+    provisional_score: float | None = Field(default=None, ge=0.0)
+    output_score: float | None = Field(default=None, ge=0.0)
+    evidence_category_count: int = Field(ge=0)
+    evidence_component_count: int = Field(ge=0)
+    positive_component_count: int = Field(ge=0)
+    neutral_component_count: int = Field(ge=0)
+    negative_component_count: int = Field(ge=0)
+    sufficient_evidence: bool
+    rank: int | None = Field(default=None, ge=1)
+    tied_rank: int | None = Field(default=None, ge=1)
+    component_scores: list[ScoreComponent] = Field(default_factory=list)
+    category_scores: list[ScoreCategory] = Field(default_factory=list)
+    applied_weights: dict[str, float] = Field(default_factory=dict)
+    applied_penalties: list[AppliedScoringPenalty] = Field(default_factory=list)
+    support_terms: list[str] = Field(default_factory=list)
+    conflicting_terms: list[str] = Field(default_factory=list)
+    calculation_rule_version: NonEmptyStr
+
+
 class ContradictionEvidence(BaseEvidence):
     contradiction_type: NonEmptyStr
     severity: ContradictionSeverity
@@ -371,6 +432,7 @@ class CandidateEvidenceBundle(StrictModel):
     localization: list[LocalizationEvidence] = Field(default_factory=list)
     fusion: list[FusionEvidence] = Field(default_factory=list)
     known_interactions: list[KnownInteractionEvidence] = Field(default_factory=list)
+    integrated_scoring: list[IntegratedScore] = Field(default_factory=list)
     contradictions: list[ContradictionEvidence] = Field(default_factory=list)
     score: CandidateScore = Field(default_factory=CandidateScore)
     engine_statuses: dict[str, EvidenceStatus] = Field(default_factory=dict)

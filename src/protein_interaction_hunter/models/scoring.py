@@ -1,4 +1,4 @@
-"""Score container only; no score or tier calculation is performed."""
+"""Backward-compatible normalized candidate score summary."""
 
 from pydantic import Field
 

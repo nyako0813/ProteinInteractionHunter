@@ -100,7 +100,7 @@ def inspect_fixture_command(
 def generate_candidates_command(
     config: Annotated[Path, typer.Option("--config", exists=True, dir_okay=False)],
 ) -> None:
-    """Generate all query-protein pairs without scores, tiers, or ranking."""
+    """Generate all query-protein pairs with optional scoring; tiers remain unset."""
     try:
         result = InteractionCandidatePipeline().run(
             config,

@@ -2,7 +2,7 @@
 
 from datetime import datetime
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Any
 
 from pydantic import Field, StringConstraints, field_validator, model_validator
 
@@ -58,6 +58,8 @@ class RunManifest(StrictModel):
     phylogenetic_profile_rule_version: NonEmptyStr | None = None
     fusion_rule_version: NonEmptyStr | None = None
     known_interactions_rule_version: NonEmptyStr | None = None
+    scoring_rule_version: NonEmptyStr | None = None
+    scoring_config_snapshot: dict[str, Any] = Field(default_factory=dict)
     policy_settings: dict[str, str | int | bool] = Field(default_factory=dict)
     parser_warnings: list[str] = Field(default_factory=list)
 

@@ -12,6 +12,7 @@ from protein_interaction_hunter.models.evidence import (
     FunctionalEvidence,
     FusionEvidence,
     GenomeContextEvidence,
+    IntegratedScore,
     KnownInteractionEvidence,
     LocalizationEvidence,
     OperonEvidence,
@@ -185,6 +186,32 @@ CANDIDATE_COLUMNS = (
     "known_interactions_conflicting_terms",
     "known_interactions_rule_version",
     "known_interactions_warnings",
+    "scoring_status",
+    "integrated_score",
+    "provisional_score",
+    "normalized_score",
+    "rank",
+    "tied_rank",
+    "sufficient_evidence",
+    "available_weight",
+    "evidence_category_count",
+    "evidence_component_count",
+    "positive_component_count",
+    "neutral_component_count",
+    "negative_component_count",
+    "scoring_rule_version",
+    "scoring_support_terms",
+    "scoring_conflicting_terms",
+    "scoring_warnings",
+    "score_component_genome_context",
+    "score_component_operon_proxy",
+    "score_component_domain_pair",
+    "score_component_functional_complementarity",
+    "score_component_localization",
+    "score_component_orthology",
+    "score_component_phylogenetic_profile",
+    "score_component_fusion",
+    "score_component_known_interactions",
 )
 
 
@@ -261,6 +288,7 @@ class CandidateTableTsvWriter:
         | None = None,
         fusion: Mapping[tuple[str, str], FusionEvidence] | None = None,
         known_interactions: Mapping[tuple[str, str], KnownInteractionEvidence] | None = None,
+        integrated_scores: Mapping[tuple[str, str], IntegratedScore] | None = None,
     ) -> Path:
         output_path = path.expanduser().resolve()
         output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -278,6 +306,7 @@ class CandidateTableTsvWriter:
         phylogenetic_profile_map = phylogenetic_profile or {}
         fusion_map = fusion or {}
         known_interactions_map = known_interactions or {}
+        integrated_score_map = integrated_scores or {}
         for candidate in sorted(candidates, key=lambda item: (item.query_id, item.protein_id)):
             pair = (candidate.query_id, candidate.protein_id)
             context = context_map.get(pair)
@@ -289,6 +318,15 @@ class CandidateTableTsvWriter:
             profile = phylogenetic_profile_map.get(pair)
             fusion_evidence = fusion_map.get(pair)
             known_interaction = known_interactions_map.get(pair)
+            integrated_score = integrated_score_map.get(pair)
+            component_values = (
+                {
+                    item.component_name: item.normalized_value
+                    for item in integrated_score.component_scores
+                }
+                if integrated_score
+                else {}
+            )
             writer.writerow(
                 {
                     "run_id": run_id,
@@ -730,6 +768,68 @@ class CandidateTableTsvWriter:
                     ),
                     "known_interactions_warnings": (
                         _list(known_interaction.warnings) if known_interaction else ""
+                    ),
+                    "scoring_status": _value(integrated_score.status if integrated_score else None),
+                    "integrated_score": _value(
+                        integrated_score.output_score if integrated_score else None
+                    ),
+                    "provisional_score": _value(
+                        integrated_score.provisional_score if integrated_score else None
+                    ),
+                    "normalized_score": _value(
+                        integrated_score.normalized_score if integrated_score else None
+                    ),
+                    "rank": _value(integrated_score.rank if integrated_score else None),
+                    "tied_rank": _value(integrated_score.tied_rank if integrated_score else None),
+                    "sufficient_evidence": _value(
+                        integrated_score.sufficient_evidence if integrated_score else None
+                    ),
+                    "available_weight": _value(
+                        integrated_score.available_weight if integrated_score else None
+                    ),
+                    "evidence_category_count": _value(
+                        integrated_score.evidence_category_count if integrated_score else None
+                    ),
+                    "evidence_component_count": _value(
+                        integrated_score.evidence_component_count if integrated_score else None
+                    ),
+                    "positive_component_count": _value(
+                        integrated_score.positive_component_count if integrated_score else None
+                    ),
+                    "neutral_component_count": _value(
+                        integrated_score.neutral_component_count if integrated_score else None
+                    ),
+                    "negative_component_count": _value(
+                        integrated_score.negative_component_count if integrated_score else None
+                    ),
+                    "scoring_rule_version": _value(
+                        integrated_score.calculation_rule_version if integrated_score else None
+                    ),
+                    "scoring_support_terms": (
+                        _list(integrated_score.support_terms) if integrated_score else ""
+                    ),
+                    "scoring_conflicting_terms": (
+                        _list(integrated_score.conflicting_terms) if integrated_score else ""
+                    ),
+                    "scoring_warnings": (
+                        _list(integrated_score.warnings) if integrated_score else ""
+                    ),
+                    "score_component_genome_context": _value(
+                        component_values.get("genome_context")
+                    ),
+                    "score_component_operon_proxy": _value(component_values.get("operon_proxy")),
+                    "score_component_domain_pair": _value(component_values.get("domain_pair")),
+                    "score_component_functional_complementarity": _value(
+                        component_values.get("functional_complementarity")
+                    ),
+                    "score_component_localization": _value(component_values.get("localization")),
+                    "score_component_orthology": _value(component_values.get("orthology")),
+                    "score_component_phylogenetic_profile": _value(
+                        component_values.get("phylogenetic_profile")
+                    ),
+                    "score_component_fusion": _value(component_values.get("fusion")),
+                    "score_component_known_interactions": _value(
+                        component_values.get("known_interactions")
                     ),
                 }
             )

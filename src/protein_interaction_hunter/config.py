@@ -137,15 +137,42 @@ class KnownInteractionsConfig(StrictModel):
     external_services: list[str] = Field(default_factory=list)
 
 
+class ScoringWeightsConfig(StrictModel):
+    genome_context: float = Field(default=1.0, ge=0.0)
+    operon_proxy: float = Field(default=1.0, ge=0.0)
+    domain_pair: float = Field(default=1.0, ge=0.0)
+    functional_complementarity: float = Field(default=1.0, ge=0.0)
+    localization: float = Field(default=0.5, ge=0.0)
+    orthology: float = Field(default=0.75, ge=0.0)
+    phylogenetic_profile: float = Field(default=1.0, ge=0.0)
+    fusion: float = Field(default=1.5, ge=0.0)
+    known_interactions: float = Field(default=1.5, ge=0.0)
+
+
+class ScoringCategoryCapsConfig(StrictModel):
+    genomic_context: float = Field(default=1.5, gt=0.0)
+    functional_annotation: float = Field(default=1.5, gt=0.0)
+    cellular_compatibility: float = Field(default=0.5, gt=0.0)
+    evolutionary: float = Field(default=2.0, gt=0.0)
+    direct_interaction: float = Field(default=2.0, gt=0.0)
+
+
+class ScoringPenaltiesConfig(StrictModel):
+    contradictory_evidence: float = Field(default=0.25, ge=0.0)
+    ambiguous_mapping: float = Field(default=0.10, ge=0.0)
+
+
 class ScoringConfig(StrictModel):
     enabled: bool = False
-    deterministic_tie_breaker: list[str] = Field(
-        default_factory=lambda: [
-            "total_ranking_score",
-            "evidence_completeness",
-            "candidate_id",
-        ]
-    )
+    rule_version: Literal["mvp1k-integrated-scoring-v1"] = "mvp1k-integrated-scoring-v1"
+    output_scale: float = Field(default=100.0, gt=0.0)
+    minimum_evidence_weight: float = Field(default=1.0, gt=0.0)
+    minimum_evidence_categories: int = Field(default=2, ge=1)
+    missing_policy: Literal["exclude_from_denominator"] = "exclude_from_denominator"
+    tie_precision: int = Field(default=8, ge=0)
+    weights: ScoringWeightsConfig = Field(default_factory=ScoringWeightsConfig)
+    category_caps: ScoringCategoryCapsConfig = Field(default_factory=ScoringCategoryCapsConfig)
+    penalties: ScoringPenaltiesConfig = Field(default_factory=ScoringPenaltiesConfig)
 
 
 class StructurePredictionQueueConfig(StrictModel):
@@ -192,7 +219,7 @@ class AppConfig(StrictModel):
     functional_complementarity: FunctionalComplementarityConfig
     localization: LocalizationConfig
     known_interactions: KnownInteractionsConfig = Field(default_factory=KnownInteractionsConfig)
-    scoring: ScoringConfig
+    scoring: ScoringConfig = Field(default_factory=ScoringConfig)
     evidence_tiers: EnabledConfig
     structure_prediction_queue: StructurePredictionQueueConfig
     output: OutputConfig

@@ -298,6 +298,24 @@
       "title": "Schema Version",
       "type": "string"
     },
+    "scoring_config_snapshot": {
+      "additionalProperties": true,
+      "title": "Scoring Config Snapshot",
+      "type": "object"
+    },
+    "scoring_rule_version": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Scoring Rule Version"
+    },
     "started_at": {
       "format": "date-time",
       "title": "Started At",

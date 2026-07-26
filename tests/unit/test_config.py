@@ -202,3 +202,55 @@ def test_invalid_known_interactions_threshold_is_rejected(
     path.write_text(yaml.safe_dump(data), encoding="utf-8")
     with pytest.raises(ConfigurationError, match=field):
         load_config(path)
+
+
+def test_scoring_config_defaults_and_nested_values(valid_config_path: Path) -> None:
+    config = load_config(valid_config_path)
+    assert config.scoring.enabled is False
+    assert config.scoring.rule_version == "mvp1k-integrated-scoring-v1"
+    assert config.scoring.output_scale == 100.0
+    assert config.scoring.weights.known_interactions == 1.5
+    assert config.scoring.category_caps.direct_interaction == 2.0
+    assert config.scoring.penalties.contradictory_evidence == 0.25
+
+
+def test_absent_scoring_section_defaults_to_disabled(
+    valid_config_path: Path,
+    tmp_path: Path,
+) -> None:
+    data = yaml.safe_load(valid_config_path.read_text(encoding="utf-8"))
+    del data["scoring"]
+    path = tmp_path / "without-scoring.yaml"
+    path.write_text(yaml.safe_dump(data), encoding="utf-8")
+    config = load_config(path)
+    assert config.scoring.enabled is False
+    assert config.scoring.weights.genome_context == 1.0
+
+
+@pytest.mark.parametrize(
+    ("path_parts", "value"),
+    [
+        (("output_scale",), 0),
+        (("minimum_evidence_weight",), 0),
+        (("minimum_evidence_categories",), 0),
+        (("tie_precision",), -1),
+        (("weights", "fusion"), -0.1),
+        (("category_caps", "evolutionary"), 0),
+        (("penalties", "contradictory_evidence"), -0.1),
+    ],
+)
+def test_invalid_scoring_config_is_rejected(
+    valid_config_path: Path,
+    tmp_path: Path,
+    path_parts: tuple[str, ...],
+    value: int | float,
+) -> None:
+    data = yaml.safe_load(valid_config_path.read_text(encoding="utf-8"))
+    target = data["scoring"]
+    for part in path_parts[:-1]:
+        target = target[part]
+    target[path_parts[-1]] = value
+    path = tmp_path / ("invalid-scoring-" + "-".join(path_parts) + ".yaml")
+    path.write_text(yaml.safe_dump(data), encoding="utf-8")
+    with pytest.raises(ConfigurationError, match=path_parts[-1]):
+        load_config(path)

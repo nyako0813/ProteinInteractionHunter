@@ -1,5 +1,38 @@
 {
   "$defs": {
+    "AppliedScoringPenalty": {
+      "additionalProperties": false,
+      "properties": {
+        "component_name": {
+          "minLength": 1,
+          "title": "Component Name",
+          "type": "string"
+        },
+        "configured_value": {
+          "minimum": 0.0,
+          "title": "Configured Value",
+          "type": "number"
+        },
+        "explanation": {
+          "minLength": 1,
+          "title": "Explanation",
+          "type": "string"
+        },
+        "penalty_name": {
+          "minLength": 1,
+          "title": "Penalty Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "penalty_name",
+        "component_name",
+        "configured_value",
+        "explanation"
+      ],
+      "title": "AppliedScoringPenalty",
+      "type": "object"
+    },
     "CandidateDisposition": {
       "enum": [
         "included",
@@ -1674,6 +1707,223 @@
       "title": "IdentifierMatchStatus",
       "type": "string"
     },
+    "IntegratedScore": {
+      "additionalProperties": false,
+      "properties": {
+        "applied_penalties": {
+          "items": {
+            "$ref": "#/$defs/AppliedScoringPenalty"
+          },
+          "title": "Applied Penalties",
+          "type": "array"
+        },
+        "applied_weights": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "title": "Applied Weights",
+          "type": "object"
+        },
+        "available_weight": {
+          "minimum": 0.0,
+          "title": "Available Weight",
+          "type": "number"
+        },
+        "calculation_rule_version": {
+          "minLength": 1,
+          "title": "Calculation Rule Version",
+          "type": "string"
+        },
+        "candidate_protein_id": {
+          "minLength": 1,
+          "title": "Candidate Protein Id",
+          "type": "string"
+        },
+        "category_scores": {
+          "items": {
+            "$ref": "#/$defs/ScoreCategory"
+          },
+          "title": "Category Scores",
+          "type": "array"
+        },
+        "component_scores": {
+          "items": {
+            "$ref": "#/$defs/ScoreComponent"
+          },
+          "title": "Component Scores",
+          "type": "array"
+        },
+        "conflicting_terms": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Conflicting Terms",
+          "type": "array"
+        },
+        "evidence_category_count": {
+          "minimum": 0,
+          "title": "Evidence Category Count",
+          "type": "integer"
+        },
+        "evidence_component_count": {
+          "minimum": 0,
+          "title": "Evidence Component Count",
+          "type": "integer"
+        },
+        "negative_component_count": {
+          "minimum": 0,
+          "title": "Negative Component Count",
+          "type": "integer"
+        },
+        "neutral_component_count": {
+          "minimum": 0,
+          "title": "Neutral Component Count",
+          "type": "integer"
+        },
+        "normalized_score": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Normalized Score"
+        },
+        "origin": {
+          "$ref": "#/$defs/EvidenceOrigin",
+          "default": "inferred"
+        },
+        "output_score": {
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Output Score"
+        },
+        "positive_component_count": {
+          "minimum": 0,
+          "title": "Positive Component Count",
+          "type": "integer"
+        },
+        "provenance": {
+          "items": {
+            "$ref": "#/$defs/EvidenceProvenance"
+          },
+          "title": "Provenance",
+          "type": "array"
+        },
+        "provisional_score": {
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Provisional Score"
+        },
+        "quality": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Quality"
+        },
+        "query_protein_id": {
+          "minLength": 1,
+          "title": "Query Protein Id",
+          "type": "string"
+        },
+        "rank": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Rank"
+        },
+        "raw_weighted_sum": {
+          "title": "Raw Weighted Sum",
+          "type": "number"
+        },
+        "status": {
+          "$ref": "#/$defs/EvidenceStatus",
+          "default": "not_run"
+        },
+        "sufficient_evidence": {
+          "title": "Sufficient Evidence",
+          "type": "boolean"
+        },
+        "support_terms": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Support Terms",
+          "type": "array"
+        },
+        "tied_rank": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Tied Rank"
+        },
+        "warnings": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "query_protein_id",
+        "candidate_protein_id",
+        "raw_weighted_sum",
+        "available_weight",
+        "evidence_category_count",
+        "evidence_component_count",
+        "positive_component_count",
+        "neutral_component_count",
+        "negative_component_count",
+        "sufficient_evidence",
+        "calculation_rule_version"
+      ],
+      "title": "IntegratedScore",
+      "type": "object"
+    },
     "KnownInteractionEvidence": {
       "additionalProperties": false,
       "properties": {
@@ -2897,6 +3147,192 @@
       "title": "RelativePosition",
       "type": "string"
     },
+    "ScoreCategory": {
+      "additionalProperties": false,
+      "properties": {
+        "available_weight": {
+          "minimum": 0.0,
+          "title": "Available Weight",
+          "type": "number"
+        },
+        "category_name": {
+          "minLength": 1,
+          "title": "Category Name",
+          "type": "string"
+        },
+        "configured_cap": {
+          "exclusiveMinimum": 0.0,
+          "title": "Configured Cap",
+          "type": "number"
+        },
+        "normalized_score": {
+          "maximum": 1.0,
+          "minimum": -1.0,
+          "title": "Normalized Score",
+          "type": "number"
+        },
+        "raw_weighted_sum": {
+          "title": "Raw Weighted Sum",
+          "type": "number"
+        }
+      },
+      "required": [
+        "category_name",
+        "raw_weighted_sum",
+        "available_weight",
+        "normalized_score",
+        "configured_cap"
+      ],
+      "title": "ScoreCategory",
+      "type": "object"
+    },
+    "ScoreComponent": {
+      "additionalProperties": false,
+      "properties": {
+        "applied": {
+          "default": false,
+          "title": "Applied",
+          "type": "boolean"
+        },
+        "category_name": {
+          "minLength": 1,
+          "title": "Category Name",
+          "type": "string"
+        },
+        "component_name": {
+          "minLength": 1,
+          "title": "Component Name",
+          "type": "string"
+        },
+        "configured_weight": {
+          "minimum": 0.0,
+          "title": "Configured Weight",
+          "type": "number"
+        },
+        "conflicting_terms": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Conflicting Terms",
+          "type": "array"
+        },
+        "direction": {
+          "enum": [
+            "positive",
+            "neutral",
+            "negative",
+            "unknown"
+          ],
+          "title": "Direction",
+          "type": "string"
+        },
+        "effective_weight": {
+          "default": 0.0,
+          "minimum": 0.0,
+          "title": "Effective Weight",
+          "type": "number"
+        },
+        "evidence_status": {
+          "$ref": "#/$defs/EvidenceStatus"
+        },
+        "exclusion_reason": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Exclusion Reason"
+        },
+        "normalized_value": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": -1.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Normalized Value"
+        },
+        "raw_value": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Raw Value"
+        },
+        "source_rule_version": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Rule Version"
+        },
+        "support_terms": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Support Terms",
+          "type": "array"
+        },
+        "warnings": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        },
+        "weighted_contribution": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Weighted Contribution"
+        }
+      },
+      "required": [
+        "component_name",
+        "category_name",
+        "evidence_status",
+        "configured_weight",
+        "direction"
+      ],
+      "title": "ScoreComponent",
+      "type": "object"
+    },
     "StrandRelationship": {
       "enum": [
         "same_direction",
@@ -2996,6 +3432,13 @@
         "$ref": "#/$defs/GenomeContextEvidence"
       },
       "title": "Genome Context",
+      "type": "array"
+    },
+    "integrated_scoring": {
+      "items": {
+        "$ref": "#/$defs/IntegratedScore"
+      },
+      "title": "Integrated Scoring",
       "type": "array"
     },
     "known_interactions": {
