@@ -11,6 +11,7 @@ from protein_interaction_hunter.models.evidence import (
     DomainEvidence,
     FunctionalEvidence,
     GenomeContextEvidence,
+    LocalizationEvidence,
     OperonEvidence,
 )
 from protein_interaction_hunter.models.protein import CandidateProtein
@@ -80,6 +81,19 @@ CANDIDATE_COLUMNS = (
     "operon_rule_version",
     "operon_rule_id",
     "operon_warnings",
+    "localization_status",
+    "localization_compartment",
+    "localization_query_compartment",
+    "localization_compatibility",
+    "localization_signal_peptide",
+    "localization_tm_helices",
+    "localization_topology",
+    "localization_matched_terms",
+    "localization_conflicting_terms",
+    "localization_rule_version",
+    "localization_annotation_source",
+    "localization_annotation_confidence",
+    "localization_warnings",
     "functional_status",
     "functional_matched",
     "functional_relationship_hints",
@@ -156,6 +170,11 @@ class CandidateTableTsvWriter:
             Sequence[DomainEvidence],
         ]
         | None = None,
+        localization: Mapping[
+            tuple[str, str],
+            LocalizationEvidence,
+        ]
+        | None = None,
         functional: Mapping[
             tuple[str, str],
             Sequence[FunctionalEvidence],
@@ -172,12 +191,14 @@ class CandidateTableTsvWriter:
         context_map = contexts or {}
         operon_map = operons or {}
         domain_map = domains or {}
+        localization_map = localization or {}
         functional_map = functional or {}
         for candidate in sorted(candidates, key=lambda item: (item.query_id, item.protein_id)):
             pair = (candidate.query_id, candidate.protein_id)
             context = context_map.get(pair)
             operon = operon_map.get(pair)
             domain_records = domain_map.get(pair, ())
+            localization_record = localization_map.get(pair)
             functional_records = functional_map.get(pair, ())
             writer.writerow(
                 {
@@ -298,6 +319,71 @@ class CandidateTableTsvWriter:
                     "domain_status": _evidence_values(
                         domain_records,
                         "status",
+                    ),
+                                        "localization_status": _value(
+                        localization_record.status
+                        if localization_record
+                        else None
+                    ),
+                    "localization_compartment": _value(
+                        localization_record.compartment
+                        if localization_record
+                        else None
+                    ),
+                    "localization_query_compartment": _value(
+                        localization_record.query_compartment
+                        if localization_record
+                        else None
+                    ),
+                    "localization_compatibility": _value(
+                        localization_record.compatibility
+                        if localization_record
+                        else None
+                    ),
+                    "localization_signal_peptide": _value(
+                        localization_record.signal_peptide
+                        if localization_record
+                        else None
+                    ),
+                    "localization_tm_helices": _value(
+                        localization_record.transmembrane_helices
+                        if localization_record
+                        else None
+                    ),
+                    "localization_topology": _value(
+                        localization_record.topology
+                        if localization_record
+                        else None
+                    ),
+                    "localization_matched_terms": (
+                        _list(localization_record.matched_terms)
+                        if localization_record
+                        else ""
+                    ),
+                    "localization_conflicting_terms": (
+                        _list(localization_record.conflicting_terms)
+                        if localization_record
+                        else ""
+                    ),
+                    "localization_rule_version": _value(
+                        localization_record.calculation_rule_version
+                        if localization_record
+                        else None
+                    ),
+                    "localization_annotation_source": _value(
+                        localization_record.annotation_source
+                        if localization_record
+                        else None
+                    ),
+                    "localization_annotation_confidence": _value(
+                        localization_record.annotation_confidence
+                        if localization_record
+                        else None
+                    ),
+                    "localization_warnings": (
+                        _list(localization_record.warnings)
+                        if localization_record
+                        else ""
                     ),
                     "domain_pair_matched": _evidence_values(
                         domain_records,

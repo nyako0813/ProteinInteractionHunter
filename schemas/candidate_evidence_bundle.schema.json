@@ -1725,6 +1725,59 @@
     "LocalizationEvidence": {
       "additionalProperties": false,
       "properties": {
+        "annotation_confidence": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Annotation Confidence"
+        },
+        "annotation_source": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Annotation Source"
+        },
+        "calculation_rule_version": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Calculation Rule Version"
+        },
+        "candidate_compartment": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Candidate Compartment"
+        },
         "compartment": {
           "anyOf": [
             {
@@ -1749,6 +1802,33 @@
           ],
           "default": null,
           "title": "Compatibility"
+        },
+        "conflicting_terms": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Conflicting Terms",
+          "type": "array"
+        },
+        "localization_annotation": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Localization Annotation"
+        },
+        "matched_terms": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Matched Terms",
+          "type": "array"
         },
         "origin": {
           "$ref": "#/$defs/EvidenceOrigin",
@@ -1780,6 +1860,32 @@
           "default": null,
           "title": "Quality"
         },
+        "query_compartment": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Query Compartment"
+        },
+        "rule_id": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Rule Id"
+        },
         "signal_peptide": {
           "anyOf": [
             {
@@ -1808,6 +1914,19 @@
           ],
           "default": null,
           "title": "Topology"
+        },
+        "transmembrane_annotation": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Transmembrane Annotation"
         },
         "transmembrane_helices": {
           "anyOf": [

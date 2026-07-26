@@ -5,10 +5,14 @@ import json
 from pathlib import Path
 
 import yaml
+from openpyxl import load_workbook
 from typer.testing import CliRunner
 
 from protein_interaction_hunter.application.gene_context import GENE_CONTEXT_RULE_VERSION
 from protein_interaction_hunter.application.identifiers import NORMALIZATION_RULE_VERSION
+from protein_interaction_hunter.application.localization import (
+    LOCALIZATION_ENGINE_VERSION,
+)
 from protein_interaction_hunter.application.pipeline import InteractionCandidatePipeline
 from protein_interaction_hunter.cli import app
 from protein_interaction_hunter.models import CandidateEvidenceBundle, EvidenceStatus, RunManifest
@@ -53,6 +57,9 @@ def e2e_config(source: Path, tmp_path: Path) -> Path:
             (fixture_dir / rules_path).resolve()
         )
 
+    data["localization"]["enabled"] = True
+    data["localization"]["source"] = "annotation_only"
+
     data["output"]["directory"] = str(tmp_path / "generated")
 
     target = tmp_path / "config.yaml"
@@ -94,6 +101,11 @@ def test_pipeline_gene_context_scores_and_jsonl_round_trip(
             bundle.engine_statuses["domains"]
             is bundle.domains[0].status
         )
+        assert len(bundle.localization) == 1
+        assert (
+            bundle.engine_statuses["localization"]
+            is bundle.localization[0].status
+        )
 
         assert all(
             status is EvidenceStatus.NOT_RUN
@@ -104,6 +116,7 @@ def test_pipeline_gene_context_scores_and_jsonl_round_trip(
                 "operon",
                 "domains",
                 "functional_complementarity",
+                "localization",
             }
         )
 
@@ -116,6 +129,29 @@ def test_pipeline_gene_context_scores_and_jsonl_round_trip(
         assert bundle.score.contradiction_penalty is None
         assert bundle.score.evidence_completeness is None
         assert bundle.evidence_tier is None
+
+    bundles_by_id = {
+        bundle.candidate_id: bundle
+        for bundle in result.bundles
+    }
+
+    near_localization = bundles_by_id["NEAR_001"].localization[0]
+    assert near_localization.status is EvidenceStatus.AVAILABLE
+    assert near_localization.query_compartment == "cytosolic"
+    assert near_localization.candidate_compartment == "cytosolic"
+    assert near_localization.compatibility is True
+    assert near_localization.transmembrane_helices == 0
+    assert near_localization.topology == "none"
+
+    membrane_localization = bundles_by_id["MEM_001"].localization[0]
+    assert membrane_localization.status is EvidenceStatus.AVAILABLE
+    assert membrane_localization.query_compartment == "cytosolic"
+    assert membrane_localization.candidate_compartment == "membrane"
+    assert membrane_localization.compatibility is False
+    assert "different_compartment" in (
+        membrane_localization.conflicting_terms
+    )
+    assert membrane_localization.topology == "multi_pass"
 
     assert (
         JsonlEvidenceBundleWriter().read(result.evidence_path)
@@ -130,34 +166,161 @@ def test_pipeline_gene_context_scores_and_jsonl_round_trip(
 
 
 def test_candidate_tsv_header_and_manifest_provenance(
-    valid_config_path: Path, tmp_path: Path
+    valid_config_path: Path,
+    tmp_path: Path,
 ) -> None:
     config = e2e_config(valid_config_path, tmp_path)
     result = InteractionCandidatePipeline().run(config)
-    with result.candidate_table_path.open(encoding="utf-8", newline="") as handle:
+
+    with result.candidate_table_path.open(
+        encoding="utf-8",
+        newline="",
+    ) as handle:
         reader = csv.reader(handle, delimiter="\t")
         assert tuple(next(reader)) == CANDIDATE_COLUMNS
         assert len(list(reader)) == 12
-    with result.candidate_table_path.open(encoding="utf-8", newline="") as handle:
-        rows_by_id = {row["candidate_id"]: row for row in csv.DictReader(handle, delimiter="\t")}
+
+    with result.candidate_table_path.open(
+        encoding="utf-8",
+        newline="",
+    ) as handle:
+        rows_by_id = {
+            row["candidate_id"]: row
+            for row in csv.DictReader(
+                handle,
+                delimiter="\t",
+            )
+        }
+
     assert rows_by_id["NEAR_001"]["distance_bp"] == "29"
     assert rows_by_id["CONTIG2_001"]["distance_bp"] == ""
     assert rows_by_id["FRAG_001"]["gene_context_status"] == "missing"
-    manifest = RunManifest.model_validate_json(result.manifest_path.read_text(encoding="utf-8"))
+
+    assert rows_by_id["NEAR_001"]["localization_status"] == "available"
+    assert (
+        rows_by_id["NEAR_001"]["localization_query_compartment"]
+        == "cytosolic"
+    )
+    assert (
+        rows_by_id["NEAR_001"]["localization_compartment"]
+        == "cytosolic"
+    )
+    assert (
+        rows_by_id["NEAR_001"]["localization_compatibility"]
+        == "True"
+    )
+    assert rows_by_id["NEAR_001"]["localization_tm_helices"] == "0"
+    assert (
+        rows_by_id["NEAR_001"]["localization_topology"]
+        == "none"
+    )
+
+    assert rows_by_id["MEM_001"]["localization_status"] == "available"
+    assert (
+        rows_by_id["MEM_001"]["localization_compartment"]
+        == "membrane"
+    )
+    assert (
+        rows_by_id["MEM_001"]["localization_compatibility"]
+        == "False"
+    )
+    assert (
+        rows_by_id["MEM_001"]["localization_topology"]
+        == "multi_pass"
+    )
+    assert "different_compartment" in (
+        rows_by_id["MEM_001"]["localization_conflicting_terms"]
+    )
+
+    manifest = RunManifest.model_validate_json(
+        result.manifest_path.read_text(
+            encoding="utf-8",
+        )
+    )
+
     assert manifest.config_sha256
     assert all(item.sha256 for item in manifest.input_files)
     assert manifest.package_version == "0.1.0"
     assert manifest.git_commit
-    assert manifest.normalization_rule_version == NORMALIZATION_RULE_VERSION
-    assert manifest.gene_context_rule_version == GENE_CONTEXT_RULE_VERSION
+    assert (
+        manifest.normalization_rule_version
+        == NORMALIZATION_RULE_VERSION
+    )
+    assert (
+        manifest.gene_context_rule_version
+        == GENE_CONTEXT_RULE_VERSION
+    )
     assert manifest.policy_settings["fragment_policy"] == "flag"
+    assert (
+        manifest.policy_settings["localization_rule_version"]
+        == LOCALIZATION_ENGINE_VERSION
+    )
     assert "scoring_not_run" in manifest.incomplete_evidence_flags
-    assert "gene_context_not_run" not in manifest.incomplete_evidence_flags
+    assert (
+        "gene_context_not_run"
+        not in manifest.incomplete_evidence_flags
+    )
+    assert (
+        "localization_not_run"
+        not in manifest.incomplete_evidence_flags
+    )
+
     assert result.config_snapshot_path.is_file()
     assert result.warning_summary_path.is_file()
     assert result.excel_path is not None
     assert result.excel_path.is_file()
 
+    workbook = load_workbook(
+        result.excel_path,
+        read_only=True,
+        data_only=True,
+    )
+    assert "Localization_Evidence" in workbook.sheetnames
+
+    worksheet = workbook["Localization_Evidence"]
+    headers = [
+        cell.value
+        for cell in next(
+            worksheet.iter_rows(
+                min_row=1,
+                max_row=1,
+            )
+        )
+    ]
+    rows = [
+        dict(zip(headers, values, strict=True))
+        for values in worksheet.iter_rows(
+            min_row=2,
+            values_only=True,
+        )
+    ]
+
+    localization_rows = {
+        row["Candidate_ID"]: row
+        for row in rows
+    }
+
+    assert localization_rows["NEAR_001"]["Status"] == "available"
+    assert (
+        localization_rows["NEAR_001"]["Query_Compartment"]
+        == "cytosolic"
+    )
+    assert (
+        localization_rows["NEAR_001"]["Candidate_Compartment"]
+        == "cytosolic"
+    )
+    assert localization_rows["NEAR_001"]["Compatibility"] is True
+    assert localization_rows["NEAR_001"]["Topology"] == "none"
+
+    assert localization_rows["MEM_001"]["Status"] == "available"
+    assert (
+        localization_rows["MEM_001"]["Candidate_Compartment"]
+        == "membrane"
+    )
+    assert localization_rows["MEM_001"]["Compatibility"] is False
+    assert localization_rows["MEM_001"]["Topology"] == "multi_pass"
+
+    workbook.close()
 
 def test_generate_candidates_cli_e2e_has_no_ranking_output(
     valid_config_path: Path, tmp_path: Path

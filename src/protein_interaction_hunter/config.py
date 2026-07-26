@@ -83,7 +83,7 @@ class FunctionalComplementarityConfig(StrictModel):
 
 class LocalizationConfig(StrictModel):
     enabled: bool = False
-    source: str = "annotation_only"
+    source: Literal["annotation_only"] = "annotation_only"
 
 
 class KnownInteractionsConfig(StrictModel):

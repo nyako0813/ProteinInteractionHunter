@@ -38,6 +38,10 @@ from protein_interaction_hunter.application.gene_context import (
     calculate_gene_context,
 )
 from protein_interaction_hunter.application.identifiers import NORMALIZATION_RULE_VERSION
+from protein_interaction_hunter.application.localization import (
+    LOCALIZATION_ENGINE_VERSION,
+    evaluate_localization,
+)
 from protein_interaction_hunter.application.operon_proxy import (
     OPERON_PROXY_RULE_VERSION,
     calculate_operon_proxy,
@@ -60,6 +64,7 @@ from protein_interaction_hunter.models.evidence import (
     EvidenceProvenance,
     FunctionalEvidence,
     GenomeContextEvidence,
+    LocalizationEvidence,
     OperonEvidence,
 )
 from protein_interaction_hunter.outputs.candidates import (
@@ -75,7 +80,6 @@ from protein_interaction_hunter.outputs.jsonl import (
 _UNIMPLEMENTED_ENGINES = (
     "orthology",
     "phylogenetic_profile",
-    "localization",
     "fusion",
     "known_interactions",
     "scoring",
@@ -378,6 +382,68 @@ def _excel_functional_rows(
 
     return rows
 
+def _excel_localization_rows(
+    run_id: str,
+    localization_evidence: dict[
+        tuple[str, str],
+        LocalizationEvidence,
+    ],
+) -> list[dict[str, object]]:
+    rows: list[dict[str, object]] = []
+
+    for (query_id, candidate_id), evidence in sorted(
+        localization_evidence.items()
+    ):
+        rows.append(
+            {
+                "Run_ID": run_id,
+                "Query_ID": query_id,
+                "Candidate_ID": candidate_id,
+                "Status": evidence.status,
+                "Candidate_Protein_ID": evidence.protein_id,
+                "Query_Compartment": evidence.query_compartment,
+                "Candidate_Compartment": evidence.candidate_compartment,
+                "Compartment": evidence.compartment,
+                "Compatibility": evidence.compatibility,
+                "Signal_Peptide": evidence.signal_peptide,
+                "Transmembrane_Helices": (
+                    evidence.transmembrane_helices
+                ),
+                "Topology": evidence.topology,
+                "Localization_Annotation": (
+                    evidence.localization_annotation
+                ),
+                "Transmembrane_Annotation": (
+                    evidence.transmembrane_annotation
+                ),
+                "Matched_Terms": "|".join(
+                    evidence.matched_terms
+                ),
+                "Conflicting_Terms": "|".join(
+                    evidence.conflicting_terms
+                ),
+                "Rule_ID": evidence.rule_id,
+                "Rule_Version": (
+                    evidence.calculation_rule_version
+                ),
+                "Annotation_Source": evidence.annotation_source,
+                "Annotation_Confidence": (
+                    evidence.annotation_confidence
+                ),
+                "Warnings": "|".join(evidence.warnings),
+                "Provenance": "|".join(
+                    (
+                        f"{item.source_name}:"
+                        f"{item.source_version or ''}:"
+                        f"{item.method or ''}"
+                    )
+                    for item in evidence.provenance
+                ),
+            }
+        )
+
+    return rows
+
 class InteractionCandidatePipeline:
     """Generate auditable candidates and coordinate-derived context without scoring."""
 
@@ -395,7 +461,13 @@ class InteractionCandidatePipeline:
         coordinates = document.features
         annotations: list[AnnotationRecord] = []
         if config.input.annotation_table is not None:
-            annotations = LocalAnnotationTsvLoader().load(config.input.annotation_table)
+            annotations = LocalAnnotationTsvLoader().load(
+                config.input.annotation_table
+            )
+        annotation_by_protein = {
+            annotation.protein_id: annotation
+            for annotation in annotations
+        }
         generated = generate_candidates(
             proteins=proteins,
             coordinates=coordinates,
@@ -500,10 +572,6 @@ class InteractionCandidatePipeline:
             functional_rules = LocalFunctionalRulesLoader().load(
                 rules_path
             )
-            annotation_by_protein = {
-                annotation.protein_id: annotation
-                for annotation in annotations
-            }
             description_by_protein = {
                 protein.protein_id: protein.description
                 for protein in proteins
@@ -538,6 +606,33 @@ class InteractionCandidatePipeline:
                     )
                 )
 
+        localization_evidence: dict[
+            tuple[str, str],
+            LocalizationEvidence,
+        ] = {}
+
+        if config.localization.enabled:
+            if config.localization.source != "annotation_only":
+                raise InputValidationError(
+                    "localization.source must be 'annotation_only' "
+                    "when localization.enabled is true"
+                )
+
+            for candidate in generated.candidates:
+                pair = (
+                    candidate.query_id,
+                    candidate.protein_id,
+                )
+                query_protein_id = canonical_query_ids[
+                    candidate.query_id
+                ]
+
+                localization_evidence[pair] = evaluate_localization(
+                    query_protein_id,
+                    candidate.protein_id,
+                    annotation_by_protein,
+                )
+
         config_hash = build_input_file_manifest(
             "config", resolved_config_path, required=True
         ).sha256
@@ -560,6 +655,7 @@ class InteractionCandidatePipeline:
             operon = operons.get(pair)
             domains = domain_evidence.get(pair, [])
             functional = functional_evidence.get(pair, [])
+            localization = localization_evidence.get(pair)
 
             statuses = {
                 engine: EvidenceStatus.NOT_RUN
@@ -585,6 +681,11 @@ class InteractionCandidatePipeline:
                 if functional
                 else EvidenceStatus.NOT_RUN
             )
+            statuses["localization"] = (
+                localization.status
+                if localization
+                else EvidenceStatus.NOT_RUN
+            )
 
             context_warnings = context.warnings if context else []
             operon_warnings = operon.warnings if operon else []
@@ -598,11 +699,21 @@ class InteractionCandidatePipeline:
                 for evidence in functional
                 for warning in evidence.warnings
             ]
+            localization_warnings = (
+                localization.warnings
+                if localization
+                else []
+            )
 
             bundles.append(
                 CandidateEvidenceBundle(
                     domains=domains,
                     functional=functional,
+                    localization=(
+                         [localization]
+                         if localization
+                         else []
+                    ),
                     run_id=run_id,
                     query_id=candidate.query_id,
                     candidate_id=candidate.protein_id,
@@ -623,6 +734,7 @@ class InteractionCandidatePipeline:
                             + operon_warnings
                             + domain_warnings
                             + functional_warnings
+                            + localization_warnings
                         )
                     ),
                 )
@@ -637,6 +749,7 @@ class InteractionCandidatePipeline:
             contexts=contexts,
             operons=operons,
             domains=domain_evidence,
+            localization=localization_evidence,
             functional=functional_evidence,
         )
         all_warnings = [warning for bundle in bundles for warning in bundle.warnings]
@@ -657,6 +770,10 @@ class InteractionCandidatePipeline:
                     "Functional_Complementarity": _excel_functional_rows(
                         run_id,
                         functional_evidence,
+                    ),
+                    "Localization_Evidence": _excel_localization_rows(
+                        run_id,
+                        localization_evidence,
                     ),
                 },
             )
@@ -701,6 +818,11 @@ class InteractionCandidatePipeline:
             manifest.policy_settings[
                 "domain_pair_rule_version"
             ] = DOMAIN_PAIR_ENGINE_VERSION
+
+        if config.localization.enabled:
+            manifest.policy_settings[
+                "localization_rule_version"
+            ] = LOCALIZATION_ENGINE_VERSION
 
         manifest.policy_settings = policies | manifest.policy_settings
         manifest.warnings = sorted(set(all_warnings))

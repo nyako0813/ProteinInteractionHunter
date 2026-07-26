@@ -154,12 +154,26 @@ class FunctionalEvidence(BaseEvidence):
 
 
 class LocalizationEvidence(BaseEvidence):
+    calculation_rule_version: NonEmptyStr | None = None
     protein_id: NonEmptyStr
     compartment: NonEmptyStr | None = None
     signal_peptide: bool | None = None
     transmembrane_helices: int | None = Field(default=None, ge=0)
     topology: NonEmptyStr | None = None
     compatibility: bool | None = None
+    query_compartment: NonEmptyStr | None = None
+    candidate_compartment: NonEmptyStr | None = None
+    localization_annotation: NonEmptyStr | None = None
+    transmembrane_annotation: NonEmptyStr | None = None
+    matched_terms: list[str] = Field(default_factory=list)
+    conflicting_terms: list[str] = Field(default_factory=list)
+    rule_id: NonEmptyStr | None = None
+    annotation_source: NonEmptyStr | None = None
+    annotation_confidence: float | None = Field(
+        default=None,
+        ge=0.0,
+        le=1.0,
+    )
 
 
 class FusionEvidence(BaseEvidence):
