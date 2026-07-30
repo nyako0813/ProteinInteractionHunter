@@ -1,0 +1,41 @@
+schema_version: "1"
+mapping_rule_version: ma4115-functional-category-mapping-v1
+go_release_folder: "2026-06-19"
+go_data_version: releases/2026-06-15
+go_sha256: c72fc198a86983d55e43aac585d1ffdbeb6e3601475b3f18b6045acdc0a0734c
+default_allowed_go_relations:
+  - is_a
+formal_categories:
+  - category_id: trna_modification
+    label: tRNA modification
+    definition: A direct catalytic or required accessory role in covalent tRNA modification.
+    inclusion_criteria: A curated identifier explicitly assigns the protein to tRNA modification.
+    exclusion_criteria: Broad translation, RNA-binding, ATPase, methyltransferase, or sulfur terms alone.
+    allowed_source_types:
+      - kegg_ko
+      - go
+    accepted_go_aspects:
+      - molecular_function
+      - biological_process
+    accepted_go_ancestor_relations:
+      - is_a
+    taxonomic_applicability: all taxa where the curated source assignment applies
+    evidence_quality: curated_database_direct_assignment
+    ambiguity_policy: omit the category when equally ranked mappings disagree
+    conflict_policy: fail policy validation for conflicting accepted mappings
+mappings:
+  - mapping_id: kegg-k07585-to-trna-modification
+    formal_category: trna_modification
+    source_type: kegg_ko
+    source_identifier: ko:K07585
+    source_aspect: not_applicable
+    match_type: exact
+    allowed_relations: []
+    minimum_specificity: exact curated KO assignment
+    priority: 100
+    mapping_status: accepted
+    rationale: KEGG defines K07585 as tRNA methyltransferase and directly lists Methanosarcina acetivorans MA_4115; the organism-specific gene entry assigns MA_4115 to K07585 and its 200-aa sequence matches the pilot query.
+    reference:
+      - https://rest.kegg.jp/get/K07585
+      - https://rest.kegg.jp/get/mac:MA_4115
+    rule_version: ma4115-functional-category-mapping-v1
