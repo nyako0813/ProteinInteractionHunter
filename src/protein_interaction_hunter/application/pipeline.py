@@ -1304,21 +1304,20 @@ class InteractionCandidatePipeline:
                     required=config.domains.enabled,
                 )
             )
-        if config.orthology.enabled and config.orthology.local_table is not None:
+        if config.orthology.local_table is not None:
             input_files.append(
                 build_input_file_manifest(
-                    "orthology_local_table", config.orthology.local_table, required=True
+                    "orthology_local_table",
+                    config.orthology.local_table,
+                    required=config.orthology.enabled,
                 )
             )
-        if (
-            config.phylogenetic_profile.enabled
-            and config.phylogenetic_profile.local_table is not None
-        ):
+        if config.phylogenetic_profile.local_table is not None:
             input_files.append(
                 build_input_file_manifest(
                     "phylogenetic_profile_local_table",
                     config.phylogenetic_profile.local_table,
-                    required=True,
+                    required=config.phylogenetic_profile.enabled,
                 )
             )
         if config.fusion.enabled and config.fusion.local_table is not None:

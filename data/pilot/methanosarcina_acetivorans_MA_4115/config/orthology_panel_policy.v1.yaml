@@ -1,0 +1,62 @@
+policy_version: ma4115-orthology-panel-v1
+query_assembly: GCF_000007345.1
+query_species_id: GCF_000007345_1
+source:
+  provider: NCBI Datasets
+  assembly_source: RefSeq
+  require_versioned_accession: true
+selection:
+  allowed_assembly_levels:
+    - Complete Genome
+    - Chromosome
+  allow_scaffold_only_for_missing_lineage: false
+  exclude_contig: true
+  exclude_mag: true
+  exclude_atypical: true
+  exclude_suppressed_or_obsolete: true
+  require_annotation: true
+  minimum_protein_count: 500
+  maximum_protein_count: 12000
+  maximum_per_species: 1
+  prefer_refseq_category:
+    - reference genome
+    - representative genome
+    - na
+  prefer_assembly_level:
+    - Complete Genome
+    - Chromosome
+  missing_checkm_policy: retain_and_flag
+  taxonomy_conflict_policy: manual_review
+  identical_proteome_policy: retain_query_then_one_representative
+panel:
+  target_minimum: 24
+  target_maximum: 40
+  layers:
+    layer_1_methanosarcina:
+      minimum: 5
+      maximum: 8
+    layer_2_methanosarcinales:
+      minimum: 5
+      maximum: 8
+    layer_3_other_methanogens:
+      minimum: 7
+      maximum: 12
+    layer_4_non_methanogenic_archaea:
+      minimum: 7
+      maximum: 12
+    layer_5_bacterial_outgroup:
+      minimum: 0
+      maximum: 0
+ordering:
+  keys:
+    - panel_layer
+    - taxonomic_group
+    - organism_name
+    - assembly_accession
+manual_review:
+  required_for:
+    - taxonomy_conflict
+    - duplicate_species
+    - missing_required_metadata
+    - scaffold_exception
+    - protein_count_outlier

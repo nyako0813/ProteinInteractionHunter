@@ -1,0 +1,32 @@
+policy_version: ma4115-query-homolog-rbh-v1
+query_protein_id: WP_011024006.1
+query_length_aa: 200
+tool:
+  name: DIAMOND
+  version: 2.0.13
+  mode: more-sensitive
+  masking: tantan
+search:
+  evalue_maximum: 1.0e-5
+  maximum_target_sequences: 25
+  minimum_bit_score: 40.0
+  minimum_percent_identity: 20.0
+  minimum_alignment_length: 60
+  minimum_query_coverage: 0.50
+  minimum_subject_coverage: 0.50
+  minimum_length_ratio: 0.50
+  maximum_length_ratio: 2.00
+  best_hit_tie_relative_bit_score: 0.01
+  secondary_hit_relative_bit_score: 0.90
+  reciprocal_search_required_for_unique_rbh: true
+classification:
+  fragment_length_ratio_maximum: 0.65
+  weak_homolog_requires_evalue_only: true
+  unique_rbh_requires_no_forward_tie: true
+  unique_rbh_requires_no_reciprocal_tie: true
+  multi_copy_minimum_secondary_hits: 1
+interpretation:
+  unique_rbh_is_operational_proxy: true
+  unique_rbh_is_formal_orthology: false
+  no_hit_is_biological_absence: false
+  fragmented_hit_is_full_presence: false

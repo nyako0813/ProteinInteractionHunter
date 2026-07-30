@@ -9,6 +9,10 @@ from protein_interaction_hunter.adapters.local.fasta import (
     duplicate_sequence_groups,
 )
 from protein_interaction_hunter.adapters.local.gff import LocalGff3Loader
+from protein_interaction_hunter.adapters.local.orthology import LocalOrthologyTsvLoader
+from protein_interaction_hunter.adapters.local.phylogenetic_profile import (
+    LocalPhylogeneticProfileTsvLoader,
+)
 from protein_interaction_hunter.application.gene_context import build_coordinate_index
 from protein_interaction_hunter.config import AppConfig
 from protein_interaction_hunter.exceptions import InputValidationError
@@ -25,6 +29,13 @@ class InputValidationSummary(StrictModel):
     domain_protein_count: int = Field(ge=0)
     unknown_domain_id_count: int = Field(ge=0)
     query_domain_annotation_count: int = Field(ge=0)
+    orthology_annotation_count: int = Field(ge=0)
+    orthology_protein_count: int = Field(ge=0)
+    unknown_orthology_id_count: int = Field(ge=0)
+    phylogenetic_profile_observation_count: int = Field(ge=0)
+    phylogenetic_profile_protein_count: int = Field(ge=0)
+    phylogenetic_profile_species_count: int = Field(ge=0)
+    unknown_phylogenetic_profile_id_count: int = Field(ge=0)
     identifier_match_count: int = Field(ge=0)
     duplicate_sequence_group_count: int = Field(ge=0)
     missing_coordinate_count: int = Field(ge=0)
@@ -56,6 +67,19 @@ def validate_local_inputs(config: AppConfig) -> InputValidationSummary:
         domain_records = LocalDomainTsvLoader().load(config.domains.local_table)
     domain_ids = {record.protein_id for record in domain_records}
 
+    orthology_records = []
+    if config.orthology.local_table is not None:
+        orthology_records = LocalOrthologyTsvLoader().load(config.orthology.local_table)
+    orthology_ids = {record.protein_id for record in orthology_records}
+
+    profile_records = []
+    if config.phylogenetic_profile.local_table is not None:
+        profile_records = LocalPhylogeneticProfileTsvLoader().load(
+            config.phylogenetic_profile.local_table
+        )
+    profile_ids = {record.protein_id for record in profile_records}
+    profile_species = {record.species_id for record in profile_records}
+
     annotation_by_id = {record.protein_id: record for record in annotations}
     hypothetical_count = 0
     for protein in proteins:
@@ -78,6 +102,14 @@ def validate_local_inputs(config: AppConfig) -> InputValidationSummary:
     unknown_domain_ids = sorted(domain_ids - protein_ids)
     if unknown_domain_ids:
         warnings.append("Domain IDs absent from proteome: " + ", ".join(unknown_domain_ids))
+    unknown_orthology_ids = sorted(orthology_ids - protein_ids)
+    if unknown_orthology_ids:
+        warnings.append("Orthology IDs absent from proteome: " + ", ".join(unknown_orthology_ids))
+    unknown_profile_ids = sorted(profile_ids - protein_ids)
+    if unknown_profile_ids:
+        warnings.append(
+            "Phylogenetic profile IDs absent from proteome: " + ", ".join(unknown_profile_ids)
+        )
 
     return InputValidationSummary(
         protein_count=len(proteins),
@@ -91,6 +123,13 @@ def validate_local_inputs(config: AppConfig) -> InputValidationSummary:
         query_domain_annotation_count=sum(
             record.protein_id in config.query.protein_ids for record in domain_records
         ),
+        orthology_annotation_count=len(orthology_records),
+        orthology_protein_count=len(orthology_ids & protein_ids),
+        unknown_orthology_id_count=len(orthology_ids - protein_ids),
+        phylogenetic_profile_observation_count=len(profile_records),
+        phylogenetic_profile_protein_count=len(profile_ids & protein_ids),
+        phylogenetic_profile_species_count=len(profile_species),
+        unknown_phylogenetic_profile_id_count=len(profile_ids - protein_ids),
         identifier_match_count=len(matched_ids),
         duplicate_sequence_group_count=len(duplicate_sequence_groups(proteins)),
         missing_coordinate_count=len(missing_coordinates),

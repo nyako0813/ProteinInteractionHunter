@@ -74,7 +74,14 @@ def validate_inputs_command(
         f"domains={summary.domain_annotation_count}, "
         f"domain_proteins={summary.domain_protein_count}, "
         f"unknown_domain_ids={summary.unknown_domain_id_count}, "
-        f"query_domains={summary.query_domain_annotation_count}"
+        f"query_domains={summary.query_domain_annotation_count}, "
+        f"orthology_records={summary.orthology_annotation_count}, "
+        f"orthology_proteins={summary.orthology_protein_count}, "
+        f"unknown_orthology_ids={summary.unknown_orthology_id_count}, "
+        f"profile_observations={summary.phylogenetic_profile_observation_count}, "
+        f"profile_proteins={summary.phylogenetic_profile_protein_count}, "
+        f"profile_species={summary.phylogenetic_profile_species_count}, "
+        f"unknown_profile_ids={summary.unknown_phylogenetic_profile_id_count}"
     )
 
 
